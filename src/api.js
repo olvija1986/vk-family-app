@@ -7,24 +7,6 @@ const API_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || ''
 const CACHE_TREE = 'family_tree_cache'
 const CACHE_BIRTHDAYS = 'birthdays_cache'
 
-const REQUEST_TIMEOUT_MS = 10000
-
-async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    })
-    return response
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-
 export async function fetchAll() {
   if (!API_URL) {
     return {
@@ -34,7 +16,7 @@ export async function fetchAll() {
   }
 
   try {
-    const res = await fetchWithTimeout(`${API_URL}?action=getAll`)
+    const res = await fetch(`${API_URL}?action=getAll`)
     const data = await res.json()
 
     const tree = (data.tree || []).map(row => ({
@@ -73,7 +55,7 @@ async function postData(body) {
     return { success: true, id: String(Date.now()) }
   }
   try {
-    const res = await fetchWithTimeout(API_URL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(body),

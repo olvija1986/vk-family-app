@@ -7,7 +7,27 @@ const API_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || ''
 const CACHE_TREE = 'family_tree_cache'
 const CACHE_BIRTHDAYS = 'birthdays_cache'
 
-const REQUEST_TIMEOUT_MS = 10000
+const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 4500
+
+function getCachedData() {
+  return {
+    tree: JSON.parse(localStorage.getItem(CACHE_TREE) || '[]'),
+    birthdays: JSON.parse(localStorage.getItem(CACHE_BIRTHDAYS) || '[]'),
+  }
+}
+
+function describeNetworkError(err, url) {
+  if (err?.name === 'AbortError') {
+    return `Таймаут запроса (${REQUEST_TIMEOUT_MS}ms): ${url}`
+  }
+
+  // Для CORS / сетевых ошибок fetch обычно кидает TypeError.
+  if (err instanceof TypeError) {
+    return `Сетевая ошибка или CORS блокировка: ${url}`
+  }
+
+  return err?.message || 'Неизвестная ошибка сети'
+}
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController()
@@ -27,14 +47,14 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_M
 
 export async function fetchAll() {
   if (!API_URL) {
-    return {
-      tree: JSON.parse(localStorage.getItem(CACHE_TREE) || '[]'),
-      birthdays: JSON.parse(localStorage.getItem(CACHE_BIRTHDAYS) || '[]'),
-    }
+    return getCachedData()
   }
 
   try {
     const res = await fetchWithTimeout(`${API_URL}?action=getAll`)
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
     const data = await res.json()
 
     const tree = (data.tree || []).map(row => ({
@@ -59,11 +79,8 @@ export async function fetchAll() {
     localStorage.setItem(CACHE_BIRTHDAYS, JSON.stringify(birthdays))
     return { tree, birthdays }
   } catch (err) {
-    console.error('Ошибка загрузки:', err)
-    return {
-      tree: JSON.parse(localStorage.getItem(CACHE_TREE) || '[]'),
-      birthdays: JSON.parse(localStorage.getItem(CACHE_BIRTHDAYS) || '[]'),
-    }
+    console.error('Ошибка загрузки:', describeNetworkError(err, `${API_URL}?action=getAll`))
+    return getCachedData()
   }
 }
 
@@ -78,10 +95,13 @@ async function postData(body) {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(body),
     })
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
     return await res.json()
   } catch (err) {
-    console.error('Ошибка отправки:', err)
-    return { success: false, error: err.message }
+    console.error('Ошибка отправки:', describeNetworkError(err, API_URL))
+    return { success: false, error: describeNetworkError(err, API_URL) }
   }
 }
 

@@ -2,7 +2,7 @@ import { Component, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-import * as bridge from '@vkontakte/vk-bridge'
+import vkBridge from '@vkontakte/vk-bridge'
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -37,9 +37,15 @@ class ErrorBoundary extends Component {
   }
 }
 
-bridge.send('VKWebAppInit').catch((err) => {
-  console.warn('VKWebAppInit недоступен вне VK-контекста:', err)
-})
+const bridge = vkBridge?.send ? vkBridge : vkBridge?.default
+
+if (typeof bridge?.send === 'function') {
+  bridge.send('VKWebAppInit').catch((err) => {
+    console.warn('VKWebAppInit недоступен вне VK-контекста:', err)
+  })
+} else {
+  console.warn('VK bridge не инициализирован: метод send недоступен')
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

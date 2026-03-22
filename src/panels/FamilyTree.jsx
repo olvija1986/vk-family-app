@@ -215,9 +215,10 @@ function TreeLinks({ links }) {
 }
 
 // ===== Карточка =====
-function MemberCard({ node, onRemove }) {
+function MemberCard({ node, onRemove, onClick }) {
   return (
-    <div className="tree-card" style={{ left: node.x, top: node.y, width: node.w, height: node.h }}>
+    <div className="tree-card" style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+      onClick={() => onClick(node)}>
       <button className="tree-card-remove" onClick={(e) => { e.stopPropagation(); onRemove(node.id) }}>✕</button>
       <div className="tree-card-emoji">{node.emoji}</div>
       <div className="tree-card-name">{node.name}</div>
@@ -286,7 +287,7 @@ function Minimap({ nodes, links, viewport, onClick, onClose }) {
 }
 
 // ===== Главный компонент =====
-export default function FamilyTree({ members, onRefresh, loading, onAddClick }) {
+export default function FamilyTree({ members, onRefresh, loading, onAddClick, onCardClick }) {
   const [msg, setMsg] = useState(null)
   const [showMinimap, setShowMinimap] = useState(false)
   const containerRef = useRef(null)
@@ -422,7 +423,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick }) 
             }}>
               <TreeLinks links={links} />
               {nodes.map(node => (
-                <MemberCard key={node.id} node={node} onRemove={handleRemove} />
+                <MemberCard key={node.id} node={node} onRemove={handleRemove} onClick={onCardClick} />
               ))}
             </div>
           </div>

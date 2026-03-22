@@ -43,6 +43,7 @@ export default function App() {
     name: '', relation: RELATIONS[0], parent1Id: '', parent2Id: '', spouseId: '',
   })
   const [bdayForm, setBdayForm] = useState({ name: '', date: '', emoji: '🧑' })
+  const [selectedMember, setSelectedMember] = useState(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -138,6 +139,7 @@ export default function App() {
           onRefresh={loadData}
           loading={loading}
           onAddClick={() => setModal('member')}
+          onCardClick={(member) => { setSelectedMember(member); setModal('detail') }}
         />
       )}
       {tab === 'birthdays' && (
@@ -206,6 +208,72 @@ export default function App() {
           </button>
         </Modal>
       )}
+
+      {/* Модалка: карточка члена семьи */}
+      {modal === 'detail' && selectedMember && (() => {
+        const spouse = selectedMember.spouseId ? members.find(m => m.id === selectedMember.spouseId) : null
+        const parent1 = selectedMember.parent1Id ? members.find(m => m.id === selectedMember.parent1Id) : null
+        const parent2 = selectedMember.parent2Id ? members.find(m => m.id === selectedMember.parent2Id) : null
+        const children = members.filter(m => m.parent1Id === selectedMember.id || m.parent2Id === selectedMember.id)
+        const hasBirthday = birthdays.some(b => b.name === selectedMember.name)
+
+        return (
+          <Modal title={`${selectedMember.emoji} ${selectedMember.name}`} onClose={() => { setModal(null); setSelectedMember(null) }}>
+            <div className="detail-card">
+              <div className="detail-emoji">{selectedMember.emoji}</div>
+              <div className="detail-name">{selectedMember.name}</div>
+              <div className="detail-relation">{selectedMember.relation}</div>
+            </div>
+
+            {(parent1 || parent2) && (
+              <div className="detail-section">
+                <div className="detail-label">Родители</div>
+                {parent1 && <div className="detail-value">{parent1.emoji} {parent1.name} ({parent1.relation})</div>}
+                {parent2 && <div className="detail-value">{parent2.emoji} {parent2.name} ({parent2.relation})</div>}
+              </div>
+            )}
+
+            {spouse && (
+              <div className="detail-section">
+                <div className="detail-label">Супруг(а)</div>
+                <div className="detail-value">❤️ {spouse.emoji} {spouse.name} ({spouse.relation})</div>
+              </div>
+            )}
+
+            {children.length > 0 && (
+              <div className="detail-section">
+                <div className="detail-label">Дети</div>
+                {children.map(c => (
+                  <div key={c.id} className="detail-value">{c.emoji} {c.name} ({c.relation})</div>
+                ))}
+              </div>
+            )}
+
+            {hasBirthday ? (
+              <div className="detail-section">
+                <div className="detail-label">День рождения</div>
+                <div className="detail-value">
+                  🎂 {(() => {
+                    const b = birthdays.find(b => b.name === selectedMember.name)
+                    if (!b || !b.date) return '—'
+                    const [, m, d] = b.date.split('-')
+                    const names = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+                    return `${Number(d)} ${names[Number(m) - 1]}`
+                  })()}
+                </div>
+              </div>
+            ) : (
+              <button className="submit-btn" style={{ marginTop: 16 }} onClick={() => {
+                setBdayForm({ name: selectedMember.name, date: '', emoji: selectedMember.emoji })
+                setSelectedMember(null)
+                setModal('birthday')
+              }}>
+                🎂 Добавить день рождения
+              </button>
+            )}
+          </Modal>
+        )
+      })()}
 
       {/* Модалка: добавить ДР */}
       {modal === 'birthday' && (

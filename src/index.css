@@ -548,3 +548,45 @@ body {
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* ===== Детальная карточка члена семьи ===== */
+.detail-card {
+  text-align: center;
+  padding: 20px 0 16px;
+}
+
+.detail-emoji {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.detail-name {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.detail-relation {
+  font-size: 14px;
+  color: #818c99;
+}
+
+.detail-section {
+  padding: 12px 0;
+  border-top: 1px solid #f0f1f3;
+}
+
+.detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #818c99;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.detail-value {
+  font-size: 15px;
+  padding: 3px 0;
+}

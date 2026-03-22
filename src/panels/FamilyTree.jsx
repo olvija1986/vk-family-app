@@ -64,7 +64,7 @@ function layoutTree(members) {
     }
   })
 
-  const MAX_ROW = 4  // макс. ячеек в одной строке
+  const MAX_ROW = 5  // макс. карточек в одной строке
 
   // Рекурсивно считаем ширину поддерева
   const subtreeWidth = {}
@@ -157,6 +157,17 @@ function layoutTree(members) {
   const nodes = []
   const nodePos = {}
   const links = []
+  const levelCardLoad = {}
+
+  const countUnitCards = (unitIds) => unitIds.length
+  const countRowCards = (rowUnits) => rowUnits.reduce((sum, cu) => sum + countUnitCards(cu), 0)
+  const reserveLevelForRow = (startLevel, rowUnits) => {
+    const rowCards = countRowCards(rowUnits)
+    let assignedLevel = startLevel
+    while ((levelCardLoad[assignedLevel] || 0) + rowCards > MAX_ROW) assignedLevel += 1
+    levelCardLoad[assignedLevel] = (levelCardLoad[assignedLevel] || 0) + rowCards
+    return assignedLevel
+  }
 
   function placeUnit(unitIds, cx, level) {
     const key = keyFromUnit(unitIds)
@@ -210,7 +221,8 @@ function layoutTree(members) {
 
       const chessOffset = ri % 2 === 1 ? Math.min(CARD_W * 0.72, rowW * 0.24) : 0
       let childX = cx - rowW / 2 + chessOffset
-      const thisRowLevel = level + 1 + ri
+      const proposedLevel = level + 1 + ri
+      const thisRowLevel = reserveLevelForRow(proposedLevel, row)
       const thisRowY = thisRowLevel * LEVEL_STEP
       const rowMidY = Math.max(parentBottomY + 20, thisRowY - 22)
 
@@ -221,7 +233,7 @@ function layoutTree(members) {
         const childCx = childX + cuW / 2
 
         placeUnit(cu, childCx, thisRowLevel)
-        childrenInRow.push({ cx: childCx, y: thisRowY })
+        childrenInRow.push({ cx: childCx, y: thisRowY, color: colorFromUnit(cu) })
 
         childX += cuW + SUBTREE_GAP
       })
@@ -251,12 +263,14 @@ function layoutTree(members) {
         const c = children[0]
         links.push({
           type: 'parent-child',
-          color: parentBranchColor,
+          color: c.color,
+          strokeWidth: 3.2,
           points: [{ x: laneX, y: midY }, { x: c.cx, y: midY }],
         })
         links.push({
           type: 'parent-child',
-          color: parentBranchColor,
+          color: c.color,
+          strokeWidth: 3.2,
           points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
         })
         return
@@ -273,7 +287,8 @@ function layoutTree(members) {
       children.forEach(c => {
         links.push({
           type: 'parent-child',
-          color: parentBranchColor,
+          color: c.color,
+          strokeWidth: 3.2,
           points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
         })
       })
@@ -286,7 +301,8 @@ function layoutTree(members) {
     const ruKey = keyFromUnit(ru)
     const ruW = subtreeWidth[ruKey]
     const rcx = rx + ruW / 2
-    placeUnit(ru, rcx, 0)
+    const rootLevel = reserveLevelForRow(0, [ru])
+    placeUnit(ru, rcx, rootLevel)
     rx += ruW + SUBTREE_GAP * 2
   })
 
@@ -295,6 +311,29 @@ function layoutTree(members) {
 
 // ===== SVG Линии =====
 function TreeLinks({ links }) {
+  const makeBranchPath = (points) => {
+    if (!points || points.length < 2) return ''
+    if (points.length === 2) {
+      const [p0, p1] = points
+      const c1x = p0.x
+      const c1y = p0.y + (p1.y - p0.y) * 0.45
+      const c2x = p1.x
+      const c2y = p1.y - (p1.y - p0.y) * 0.45
+      return `M ${p0.x} ${p0.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p1.x} ${p1.y}`
+    }
+
+    let d = `M ${points[0].x} ${points[0].y}`
+    for (let i = 1; i < points.length; i += 1) {
+      const prev = points[i - 1]
+      const curr = points[i]
+      const mx = (prev.x + curr.x) / 2
+      const my = (prev.y + curr.y) / 2
+      d += ` Q ${prev.x} ${prev.y}, ${mx} ${my}`
+      if (i === points.length - 1) d += ` T ${curr.x} ${curr.y}`
+    }
+    return d
+  }
+
   return (
     <svg className="tree-svg" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
       {links.map((link, i) => {
@@ -313,12 +352,19 @@ function TreeLinks({ links }) {
           )
         }
         if (link.type === 'parent-child' && link.points) {
-          const d = link.points.map((p, j) => `${j === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+          const d = makeBranchPath(link.points)
+          const strokeWidth = link.strokeWidth || 2.8
           return (
-            <path key={`p${i}`} d={d}
-              fill="none" stroke={link.color || '#bbb'} strokeWidth={2.8}
-              strokeLinecap="round" strokeLinejoin="round"
-            />
+            <g key={`p${i}`}>
+              <path d={d}
+                fill="none" stroke="rgba(51, 80, 45, 0.15)" strokeWidth={strokeWidth + 1.4}
+                strokeLinecap="round" strokeLinejoin="round"
+              />
+              <path d={d}
+                fill="none" stroke={link.color || '#bbb'} strokeWidth={strokeWidth}
+                strokeLinecap="round" strokeLinejoin="round"
+              />
+            </g>
           )
         }
         return null

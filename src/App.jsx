@@ -190,6 +190,7 @@ export default function App() {
           birthdays={birthdays}
           loading={loading}
           onAddClick={() => setModal('birthday')}
+          onRefresh={loadData}
         />
       )}
 

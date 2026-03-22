@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { fetchAll, addMember, addBirthday } from './api'
+import { fetchAll, addMember, addBirthday, updateMember } from './api'
 import FamilyTree from './panels/FamilyTree'
 import Birthdays from './panels/Birthdays'
 
@@ -81,7 +81,7 @@ export default function App() {
       generation,
     }
 
-    // Сохраняем локально (пока нет API)
+    // Сохраняем
     const id = String(Date.now())
     const updated = [...members, { ...newMember, id }]
 
@@ -96,7 +96,13 @@ export default function App() {
     localStorage.setItem('family_tree_cache', JSON.stringify(updated))
     setMembers(updated)
 
-    await addMember(newMember)
+    // Отправляем в Google Sheets
+    await addMember({ ...newMember, id })
+
+    // Если есть супруг — обновляем его spouseId в таблице
+    if (memberForm.spouseId) {
+      await updateMember({ id: memberForm.spouseId, spouseId: id })
+    }
 
     setSaving(false)
     setMemberForm({ name: '', relation: RELATIONS[0], parent1Id: '', parent2Id: '', spouseId: '' })

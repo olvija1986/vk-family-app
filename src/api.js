@@ -71,6 +71,10 @@ export async function addMember(data) {
   return postData({ action: 'addMember', ...data })
 }
 
+export async function updateMember(data) {
+  return postData({ action: 'updateMember', ...data })
+}
+
 export async function removeMember(id) {
   return postData({ action: 'removeMember', id })
 }

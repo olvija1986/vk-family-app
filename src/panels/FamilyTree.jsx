@@ -111,14 +111,22 @@ function layoutTree(members) {
     })
   })
 
-  // Линии родитель→ребёнок
+  // Группируем детей по паре родителей
+  const parentGroups = {}
   members.forEach(m => {
-    const parents = [m.parent1Id, m.parent2Id].filter(p => p && nodePos[p])
+    const parents = [m.parent1Id, m.parent2Id].filter(p => p && nodePos[p]).sort()
     if (!parents.length || !nodePos[m.id]) return
+    const key = parents.join('_')
+    if (!parentGroups[key]) parentGroups[key] = { parents, children: [] }
+    parentGroups[key].children.push(m)
+  })
+
+  // Линии родитель→дети (вилкой от каждой пары родителей)
+  Object.values(parentGroups).forEach(group => {
+    const { parents, children } = group
 
     let parentCenterX, parentBottomY
     if (parents.length === 2 && nodePos[parents[0]] && nodePos[parents[1]]) {
-      // Линия идёт от середины между двумя родителями
       parentCenterX = (nodePos[parents[0]].x + CARD_W / 2 + nodePos[parents[1]].x + CARD_W / 2) / 2
       parentBottomY = nodePos[parents[0]].y + CARD_H
     } else {
@@ -126,19 +134,47 @@ function layoutTree(members) {
       parentBottomY = nodePos[parents[0]].y + CARD_H
     }
 
-    const childCenterX = nodePos[m.id].x + CARD_W / 2
-    const childTopY = nodePos[m.id].y
+    const childCenters = children.map(c => ({
+      x: nodePos[c.id].x + CARD_W / 2,
+      y: nodePos[c.id].y,
+    }))
 
+    const childTopY = childCenters[0].y
     const midY = parentBottomY + (childTopY - parentBottomY) / 2
 
+    // Вертикаль от родителей вниз до midY
     links.push({
       type: 'parent-child',
       points: [
         { x: parentCenterX, y: parentBottomY },
         { x: parentCenterX, y: midY },
-        { x: childCenterX, y: midY },
-        { x: childCenterX, y: childTopY },
       ],
+    })
+
+    // Горизонтальная линия на уровне midY (охватывает всех детей + центр родителей)
+    const allX = [...childCenters.map(c => c.x), parentCenterX]
+    const leftX = Math.min(...allX)
+    const rightX = Math.max(...allX)
+
+    if (leftX !== rightX) {
+      links.push({
+        type: 'parent-child',
+        points: [
+          { x: leftX, y: midY },
+          { x: rightX, y: midY },
+        ],
+      })
+    }
+
+    // Вертикали от midY вниз к каждому ребёнку
+    childCenters.forEach(c => {
+      links.push({
+        type: 'parent-child',
+        points: [
+          { x: c.x, y: midY },
+          { x: c.x, y: c.y },
+        ],
+      })
     })
   })
 

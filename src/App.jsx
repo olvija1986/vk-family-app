@@ -39,8 +39,9 @@ export default function App() {
   const [modal, setModal] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Формы
-  const [memberForm, setMemberForm] = useState({ name: '', relation: RELATIONS[0], parentId: '' })
+  const [memberForm, setMemberForm] = useState({
+    name: '', relation: RELATIONS[0], parent1Id: '', parent2Id: '', spouseId: '',
+  })
   const [bdayForm, setBdayForm] = useState({ name: '', date: '', emoji: '🧑' })
 
   const loadData = useCallback(async () => {
@@ -60,33 +61,68 @@ export default function App() {
   const handleAddMember = async () => {
     if (!memberForm.name.trim()) return
     setSaving(true)
-    const parent = members.find(m => String(m.id) === String(memberForm.parentId))
-    await addMember({
+
+    // Определяем поколение
+    const p1 = members.find(m => String(m.id) === memberForm.parent1Id)
+    const p2 = members.find(m => String(m.id) === memberForm.parent2Id)
+    const spouse = members.find(m => String(m.id) === memberForm.spouseId)
+    let generation = 0
+    if (p1) generation = (p1.generation || 0) + 1
+    else if (p2) generation = (p2.generation || 0) + 1
+    else if (spouse) generation = spouse.generation || 0
+
+    const newMember = {
       name: memberForm.name.trim(),
       relation: memberForm.relation,
       emoji: EMOJIS[memberForm.relation] || '🧑',
-      parentId: memberForm.parentId || '',
-      generation: parent ? parent.generation + 1 : 0,
-    })
+      parent1Id: memberForm.parent1Id || '',
+      parent2Id: memberForm.parent2Id || '',
+      spouseId: memberForm.spouseId || '',
+      generation,
+    }
+
+    // Сохраняем локально (пока нет API)
+    const id = String(Date.now())
+    const updated = [...members, { ...newMember, id }]
+
+    // Если указан супруг — обновим и его (spouseId)
+    if (memberForm.spouseId) {
+      const spouseIdx = updated.findIndex(m => m.id === memberForm.spouseId)
+      if (spouseIdx >= 0) {
+        updated[spouseIdx] = { ...updated[spouseIdx], spouseId: id }
+      }
+    }
+
+    localStorage.setItem('family_tree_cache', JSON.stringify(updated))
+    setMembers(updated)
+
+    await addMember(newMember)
+
     setSaving(false)
-    setMemberForm({ name: '', relation: RELATIONS[0], parentId: '' })
+    setMemberForm({ name: '', relation: RELATIONS[0], parent1Id: '', parent2Id: '', spouseId: '' })
     setModal(null)
-    loadData()
   }
 
   const handleAddBirthday = async () => {
     if (!bdayForm.name.trim() || !bdayForm.date) return
     setSaving(true)
-    await addBirthday({
-      name: bdayForm.name.trim(),
-      date: bdayForm.date,
-      emoji: bdayForm.emoji || '🧑',
-    })
+
+    const id = String(Date.now())
+    const entry = { id, name: bdayForm.name.trim(), date: bdayForm.date, emoji: bdayForm.emoji || '🧑' }
+    const updated = [...birthdays, entry]
+    localStorage.setItem('birthdays_cache', JSON.stringify(updated))
+    setBirthdays(updated)
+
+    await addBirthday(entry)
+
     setSaving(false)
     setBdayForm({ name: '', date: '', emoji: '🧑' })
     setModal(null)
-    loadData()
   }
+
+  const memberOptions = members.map(m => (
+    <option key={m.id} value={m.id}>{m.emoji} {m.name} ({m.relation})</option>
+  ))
 
   return (
     <>
@@ -98,7 +134,6 @@ export default function App() {
           onAddClick={() => setModal('member')}
         />
       )}
-
       {tab === 'birthdays' && (
         <Birthdays
           birthdays={birthdays}
@@ -130,18 +165,34 @@ export default function App() {
               placeholder="Введите имя" />
           </div>
           <div className="form-group">
-            <label className="form-label">Родственная связь</label>
+            <label className="form-label">Кто в семье</label>
             <select className="form-select" value={memberForm.relation}
               onChange={e => setMemberForm({...memberForm, relation: e.target.value})}>
               {RELATIONS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Родитель (необязательно)</label>
-            <select className="form-select" value={memberForm.parentId}
-              onChange={e => setMemberForm({...memberForm, parentId: e.target.value})}>
-              <option value="">Нет</option>
-              {members.map(m => <option key={m.id} value={String(m.id)}>{m.emoji} {m.name} ({m.relation})</option>)}
+            <label className="form-label">Родитель 1</label>
+            <select className="form-select" value={memberForm.parent1Id}
+              onChange={e => setMemberForm({...memberForm, parent1Id: e.target.value})}>
+              <option value="">— не выбран —</option>
+              {memberOptions}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Родитель 2</label>
+            <select className="form-select" value={memberForm.parent2Id}
+              onChange={e => setMemberForm({...memberForm, parent2Id: e.target.value})}>
+              <option value="">— не выбран —</option>
+              {memberOptions}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Супруг / Супруга</label>
+            <select className="form-select" value={memberForm.spouseId}
+              onChange={e => setMemberForm({...memberForm, spouseId: e.target.value})}>
+              <option value="">— не выбран(а) —</option>
+              {memberOptions}
             </select>
           </div>
           <button className="submit-btn" onClick={handleAddMember} disabled={saving}>

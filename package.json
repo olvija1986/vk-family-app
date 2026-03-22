@@ -1,6 +1,7 @@
 {
   "name": "vk-family-app",
-  "private": true,
+  "homepage": "https://olvija1986.github.io/vk-family-app",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
   "scripts": {

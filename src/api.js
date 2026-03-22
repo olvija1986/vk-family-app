@@ -1,4 +1,8 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbxGTjVI7A11pvIRatRb1cTd-WcEOHvDlMIPjmIEa0GJXHlMogiTlSPBdNCTpejqvf-lGA/exec'
+// =============================================
+// API для работы с Google Sheets
+// =============================================
+
+const API_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || ''
 
 const CACHE_TREE = 'family_tree_cache'
 const CACHE_BIRTHDAYS = 'birthdays_cache'
@@ -47,6 +51,7 @@ export async function fetchAll() {
 
 async function postData(body) {
   if (!API_URL) {
+    console.warn('API_URL не задан — сохраняем локально')
     return { success: true, id: String(Date.now()) }
   }
   try {
@@ -57,6 +62,7 @@ async function postData(body) {
     })
     return await res.json()
   } catch (err) {
+    console.error('Ошибка отправки:', err)
     return { success: false, error: err.message }
   }
 }

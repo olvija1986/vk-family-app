@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { removeMember as apiRemoveMember } from '../api'
 
 // ===== Расчёт позиций узлов дерева (subtree layout) =====
 function layoutTree(members) {
@@ -8,12 +7,11 @@ function layoutTree(members) {
   const byId = {}
   members.forEach(m => { byId[m.id] = m })
 
-  const CARD_W = 80
-  const CARD_H = 95
-  const COUPLE_GAP = 16
-  const SIBLING_GAP = 12
-  const SUBTREE_GAP = 24
-  const LEVEL_GAP = 70
+  const CARD_W = 112
+  const CARD_H = 124
+  const COUPLE_GAP = 22
+  const SUBTREE_GAP = 36
+  const LEVEL_GAP = 92
 
   // Находим пары (супруги)
   const coupleMap = {} // id → spouseId
@@ -189,7 +187,8 @@ function layoutTree(members) {
         rowW += subtreeWidth[keyFromUnit(cu)]
       })
 
-      let childX = cx - rowW / 2
+      const chessOffset = ri % 2 === 1 ? Math.min(CARD_W * 0.55, rowW * 0.18) : 0
+      let childX = cx - rowW / 2 + chessOffset
       const thisRowY = rowY + ri * STAGGER_Y
 
       row.forEach((cu) => {
@@ -286,11 +285,10 @@ function TreeLinks({ links }) {
 }
 
 // ===== Карточка =====
-function MemberCard({ node, onRemove, onClick }) {
+function MemberCard({ node, onClick }) {
   return (
     <div className="tree-card" style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
       onClick={() => onClick(node)}>
-      <button className="tree-card-remove" onClick={(e) => { e.stopPropagation(); onRemove(node.id) }}>✕</button>
       <div className="tree-card-emoji">{node.emoji}</div>
       <div className="tree-card-name">{node.name}</div>
       <div className="tree-card-relation">{node.relation}</div>
@@ -358,8 +356,7 @@ function Minimap({ nodes, links, viewport, onClick, onClose }) {
 }
 
 // ===== Главный компонент =====
-export default function FamilyTree({ members, onRefresh, loading, onAddClick, onCardClick }) {
-  const [msg, setMsg] = useState(null)
+export default function FamilyTree({ members, loading, onAddClick, onCardClick }) {
   const [showMinimap, setShowMinimap] = useState(false)
   const containerRef = useRef(null)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -391,14 +388,6 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
     setScale(clampedScale)
     setPan({ x: cx, y: cy })
   }, [nodes])
-
-  const showMessage = (text) => { setMsg(text); setTimeout(() => setMsg(null), 2000) }
-
-  const handleRemove = async (id) => {
-    const r = await apiRemoveMember(id)
-    if (r.success) { showMessage('🗑 Удалено'); onRefresh() }
-    else { showMessage('❌ Ошибка') }
-  }
 
   // Drag / pan
   const onPointerDown = useCallback((e) => {
@@ -494,7 +483,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
             }}>
               <TreeLinks links={links} />
               {nodes.map(node => (
-                <MemberCard key={node.id} node={node} onRemove={handleRemove} onClick={onCardClick} />
+                <MemberCard key={node.id} node={node} onClick={onCardClick} />
               ))}
             </div>
           </div>
@@ -511,7 +500,6 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
           />
         )}
       </div>
-      {msg && <div className="snackbar">{msg}</div>}
     </div>
   )
 }

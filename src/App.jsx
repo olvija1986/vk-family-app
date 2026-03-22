@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   SplitLayout,
   SplitCol,
@@ -11,11 +11,31 @@ import {
   Icon28Users3Outline,
   Icon28GiftOutline,
 } from '@vkontakte/icons'
+import { fetchAll } from './api'
 import FamilyTree from './panels/FamilyTree'
 import Birthdays from './panels/Birthdays'
 
 export default function App() {
   const [activeStory, setActiveStory] = useState('tree')
+  const [members, setMembers] = useState([])
+  const [birthdays, setBirthdays] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await fetchAll()
+      setMembers(data.tree || [])
+      setBirthdays(data.birthdays || [])
+    } catch (err) {
+      console.error('Ошибка загрузки:', err)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   return (
     <SplitLayout>
@@ -42,10 +62,20 @@ export default function App() {
           }
         >
           <View id="tree" activePanel="tree-panel">
-            <FamilyTree id="tree-panel" />
+            <FamilyTree
+              id="tree-panel"
+              members={members}
+              onRefresh={loadData}
+              loading={loading}
+            />
           </View>
           <View id="birthdays" activePanel="birthdays-panel">
-            <Birthdays id="birthdays-panel" />
+            <Birthdays
+              id="birthdays-panel"
+              birthdays={birthdays}
+              onRefresh={loadData}
+              loading={loading}
+            />
           </View>
         </Epic>
       </SplitCol>

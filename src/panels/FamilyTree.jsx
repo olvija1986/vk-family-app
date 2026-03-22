@@ -72,9 +72,22 @@ function layoutTree(members) {
   const subtreeHeight = {}
   const subtreeCache = {}
 
-  function calcWidth(unitIds) {
-    const key = unitIds.sort().join('_')
+  const keyFromUnit = (unitIds) => [...unitIds].sort().join('_')
+
+  function calcWidth(unitIds, stack = new Set()) {
+    const key = keyFromUnit(unitIds)
     if (subtreeWidth[key] !== undefined) return subtreeWidth[key]
+
+    if (stack.has(key)) {
+      const fallbackW = unitIds.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
+      subtreeWidth[key] = fallbackW
+      subtreeHeight[key] = CARD_H
+      subtreeCache[key] = []
+      return fallbackW
+    }
+
+    const nextStack = new Set(stack)
+    nextStack.add(key)
 
     const unitW = unitIds.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
 
@@ -113,7 +126,7 @@ function layoutTree(members) {
       let rowW = 0
       row.forEach((cu, i) => {
         if (i > 0) rowW += SUBTREE_GAP
-        rowW += calcWidth(cu)
+        rowW += calcWidth(cu, nextStack)
       })
       if (rowW > maxRowW) maxRowW = rowW
     })
@@ -130,7 +143,7 @@ function layoutTree(members) {
   const links = []
 
   function placeUnit(unitIds, cx, y) {
-    const key = unitIds.sort().join('_')
+    const key = keyFromUnit(unitIds)
 
     // Размещаем саму ячейку по центру
     if (unitIds.length === 2) {
@@ -173,14 +186,14 @@ function layoutTree(members) {
       let rowW = 0
       row.forEach((cu, i) => {
         if (i > 0) rowW += SUBTREE_GAP
-        rowW += subtreeWidth[cu.sort().join('_')]
+        rowW += subtreeWidth[keyFromUnit(cu)]
       })
 
       let childX = cx - rowW / 2
       const thisRowY = rowY + ri * STAGGER_Y
 
-      row.forEach((cu, i) => {
-        const cuKey = cu.sort().join('_')
+      row.forEach((cu) => {
+        const cuKey = keyFromUnit(cu)
         const cuW = subtreeWidth[cuKey]
         const childCx = childX + cuW / 2
 
@@ -226,15 +239,9 @@ function layoutTree(members) {
   }
 
   // Размещаем все корневые ячейки
-  let totalRootW = 0
-  rootUnits.forEach((ru, i) => {
-    if (i > 0) totalRootW += SUBTREE_GAP * 2
-    totalRootW += subtreeWidth[ru.sort().join('_')]
-  })
-
   let rx = 0
-  rootUnits.forEach((ru, i) => {
-    const ruKey = ru.sort().join('_')
+  rootUnits.forEach((ru) => {
+    const ruKey = keyFromUnit(ru)
     const ruW = subtreeWidth[ruKey]
     const rcx = rx + ruW / 2
     placeUnit(ru, rcx, 0)
@@ -361,7 +368,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
   const [containerSize, setContainerSize] = useState({ w: 400, h: 600 })
 
-  const { nodes, links, familyBoxes } = useMemo(() => layoutTree(members), [members])
+  const { nodes, links } = useMemo(() => layoutTree(members), [members])
 
   // Авто-центрировать при загрузке
   useEffect(() => {

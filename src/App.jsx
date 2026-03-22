@@ -57,6 +57,7 @@ export default function App() {
     setLoading(false)
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData() }, [loadData])
 
   const handleAddMember = async () => {

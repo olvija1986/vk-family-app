@@ -188,8 +188,8 @@ function layoutTree(members) {
       rows.push(childUnits.slice(i, i + MAX_ROW))
     }
 
-    // Для каждой строки
-    const allChildInfo = [] // {cx, cy} для линий
+    // Для каждой строки отдельно, чтобы не тянуть одну длинную перекладину через все уровни
+    const rowChildInfos = [] // [{ midY, children: [{cx, y}] }]
 
     rows.forEach((row, ri) => {
       // Ширина этой строки
@@ -199,55 +199,57 @@ function layoutTree(members) {
         rowW += subtreeWidth[keyFromUnit(cu)]
       })
 
-      const chessOffset = ri % 2 === 1 ? Math.min(CARD_W * 0.55, rowW * 0.18) : 0
+      const chessOffset = ri % 2 === 1 ? Math.min(CARD_W * 0.72, rowW * 0.24) : 0
       let childX = cx - rowW / 2 + chessOffset
       const thisRowLevel = level + 1 + ri
       const thisRowY = thisRowLevel * LEVEL_STEP
+      const rowMidY = parentBottomY + Math.min(LEVEL_GAP * 0.5, LEVEL_GAP - 14) + ri * LEVEL_STEP
 
+      const childrenInRow = []
       row.forEach((cu) => {
         const cuKey = keyFromUnit(cu)
         const cuW = subtreeWidth[cuKey]
         const childCx = childX + cuW / 2
 
         placeUnit(cu, childCx, thisRowLevel)
-        allChildInfo.push({ cx: childCx, y: thisRowY })
+        childrenInRow.push({ cx: childCx, y: thisRowY })
 
         childX += cuW + SUBTREE_GAP
       })
+
+      rowChildInfos.push({ midY: rowMidY, children: childrenInRow })
     })
 
-    // Рисуем линии
-    const midY = parentBottomY + Math.min(LEVEL_GAP * 0.5, LEVEL_GAP - 14)
+    // Рисуем линии построчно: отдельная перекладина на каждый ряд детей
+    rowChildInfos.forEach(({ midY, children }) => {
+      links.push({
+        type: 'parent-child',
+        points: [{ x: cx, y: parentBottomY }, { x: cx, y: midY }],
+      })
 
-    // Вертикаль от родителей
-    links.push({
-      type: 'parent-child',
-      points: [{ x: cx, y: parentBottomY }, { x: cx, y: midY }],
-    })
-
-    if (allChildInfo.length === 1) {
-      const c = allChildInfo[0]
-      if (cx !== c.cx) {
-        links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
+      if (children.length === 1) {
+        const c = children[0]
+        if (cx !== c.cx) {
+          links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
+        }
+        links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
+        return
       }
-      links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
-    } else {
-      // Горизонтальная перекладина
-      const allCx = allChildInfo.map(c => c.cx)
+
+      const allCx = children.map(c => c.cx)
       const leftX = Math.min(...allCx, cx)
       const rightX = Math.max(...allCx, cx)
       links.push({
         type: 'parent-child',
         points: [{ x: leftX, y: midY }, { x: rightX, y: midY }],
       })
-      // Вертикали к каждому ребёнку
-      allChildInfo.forEach(c => {
+      children.forEach(c => {
         links.push({
           type: 'parent-child',
           points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
         })
       })
-    }
+    })
   }
 
   // Размещаем все корневые ячейки

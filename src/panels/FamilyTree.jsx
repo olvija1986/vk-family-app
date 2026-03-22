@@ -12,6 +12,7 @@ function layoutTree(members) {
   const COUPLE_GAP = 22
   const SUBTREE_GAP = 36
   const LEVEL_GAP = 92
+  const LEVEL_STEP = CARD_H + LEVEL_GAP
 
   // Находим пары (супруги)
   const coupleMap = {} // id → spouseId
@@ -63,25 +64,24 @@ function layoutTree(members) {
   })
 
   const MAX_ROW = 4  // макс. ячеек в одной строке
-  const STAGGER_Y = CARD_H + 30 // сдвиг второй шахматной строки
 
   // Рекурсивно считаем ширину поддерева
   const subtreeWidth = {}
-  const subtreeHeight = {}
+  const subtreeDepth = {}
   const subtreeCache = {}
 
   const keyFromUnit = (unitIds) => [...unitIds].sort().join('_')
 
-  function calcWidth(unitIds, stack = new Set()) {
+  function calcMetrics(unitIds, stack = new Set()) {
     const key = keyFromUnit(unitIds)
-    if (subtreeWidth[key] !== undefined) return subtreeWidth[key]
+    if (subtreeWidth[key] !== undefined) return { width: subtreeWidth[key], depth: subtreeDepth[key] }
 
     if (stack.has(key)) {
       const fallbackW = unitIds.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
       subtreeWidth[key] = fallbackW
-      subtreeHeight[key] = CARD_H
+      subtreeDepth[key] = 1
       subtreeCache[key] = []
-      return fallbackW
+      return { width: fallbackW, depth: 1 }
     }
 
     const nextStack = new Set(stack)
@@ -92,9 +92,9 @@ function layoutTree(members) {
     const children = getChildren(unitIds)
     if (!children.length) {
       subtreeWidth[key] = unitW
-      subtreeHeight[key] = CARD_H
+      subtreeDepth[key] = 1
       subtreeCache[key] = []
-      return unitW
+      return { width: unitW, depth: 1 }
     }
 
     const childUnits = []
@@ -124,24 +124,37 @@ function layoutTree(members) {
       let rowW = 0
       row.forEach((cu, i) => {
         if (i > 0) rowW += SUBTREE_GAP
-        rowW += calcWidth(cu, nextStack)
+        rowW += calcMetrics(cu, nextStack).width
       })
       if (rowW > maxRowW) maxRowW = rowW
     })
 
+    let maxDepth = 1
+    rows.forEach((row, ri) => {
+      row.forEach((cu) => {
+        const cuKey = keyFromUnit(cu)
+        const childDepth = subtreeDepth[cuKey]
+        const candidateDepth = 1 + ri + childDepth
+        if (candidateDepth > maxDepth) maxDepth = candidateDepth
+      })
+    })
+
     subtreeWidth[key] = Math.max(unitW, maxRowW)
-    return subtreeWidth[key]
+    subtreeDepth[key] = maxDepth
+    return { width: subtreeWidth[key], depth: subtreeDepth[key] }
   }
 
-  rootUnits.forEach(ru => calcWidth(ru))
+  rootUnits.forEach(ru => calcMetrics(ru))
 
   // Раскладываем
   const nodes = []
   const nodePos = {}
   const links = []
 
-  function placeUnit(unitIds, cx, y) {
+  function placeUnit(unitIds, cx, level) {
     const key = keyFromUnit(unitIds)
+
+    const y = level * LEVEL_STEP
 
     // Размещаем саму ячейку по центру
     if (unitIds.length === 2) {
@@ -176,7 +189,6 @@ function layoutTree(members) {
     }
 
     // Для каждой строки
-    let rowY = y + CARD_H + LEVEL_GAP
     const allChildInfo = [] // {cx, cy} для линий
 
     rows.forEach((row, ri) => {
@@ -189,14 +201,15 @@ function layoutTree(members) {
 
       const chessOffset = ri % 2 === 1 ? Math.min(CARD_W * 0.55, rowW * 0.18) : 0
       let childX = cx - rowW / 2 + chessOffset
-      const thisRowY = rowY + ri * STAGGER_Y
+      const thisRowLevel = level + 1 + ri
+      const thisRowY = thisRowLevel * LEVEL_STEP
 
       row.forEach((cu) => {
         const cuKey = keyFromUnit(cu)
         const cuW = subtreeWidth[cuKey]
         const childCx = childX + cuW / 2
 
-        placeUnit(cu, childCx, thisRowY)
+        placeUnit(cu, childCx, thisRowLevel)
         allChildInfo.push({ cx: childCx, y: thisRowY })
 
         childX += cuW + SUBTREE_GAP
@@ -204,7 +217,7 @@ function layoutTree(members) {
     })
 
     // Рисуем линии
-    const midY = parentBottomY + LEVEL_GAP * 0.35
+    const midY = parentBottomY + Math.min(LEVEL_GAP * 0.5, LEVEL_GAP - 14)
 
     // Вертикаль от родителей
     links.push({

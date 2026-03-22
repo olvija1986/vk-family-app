@@ -1,8 +1,391 @@
-body {
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: #edeef0;
+  color: #222;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100vh;
+  max-width: 500px;
+  margin: 0 auto;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Табы ===== */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #e7e8ec;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #99a2ad;
+  font-size: 11px;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.tabbar-item.active {
+  color: #2688eb;
+}
+
+.tabbar-item svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* ===== Хедер ===== */
+.panel-header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid #e7e8ec;
+  padding: 14px 16px;
+  font-size: 20px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+/* ===== Контент ===== */
+.panel-content {
+  flex: 1;
+  padding-bottom: 70px;
+}
+
+/* ===== Кнопка «Добавить» ===== */
+.add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 32px);
+  margin: 12px 16px;
+  padding: 12px;
+  background: #2688eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.add-btn:active {
+  background: #1f7ad6;
+}
+
+/* ===== Секция ===== */
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #818c99;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 16px 8px;
+}
+
+/* ===== Карточки дерева ===== */
+.generation-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 16px 12px;
+  justify-content: center;
+}
+
+.family-member-card {
+  position: relative;
+  background: #f5f5f7;
+  border-radius: 14px;
+  padding: 14px 10px 10px;
+  min-width: 95px;
+  max-width: 120px;
+  text-align: center;
+  transition: transform 0.15s;
+}
+
+.family-member-card:active {
+  transform: scale(0.97);
+}
+
+.member-emoji {
+  font-size: 36px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.member-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.member-relation {
+  font-size: 11px;
+  color: #818c99;
+}
+
+.member-parent {
+  font-size: 10px;
+  color: #adb5bd;
+  margin-top: 3px;
+}
+
+.member-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: none;
+  border: none;
+  color: #adb5bd;
+  cursor: pointer;
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-remove:hover {
+  background: rgba(0,0,0,0.06);
+  color: #666;
+}
+
+/* ===== Баннер ближайшего ДР ===== */
+.nearest-birthday {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin: 12px 16px 0;
+  color: white;
+}
+
+.nearest-emoji { font-size: 38px; line-height: 1; }
+.nearest-info { flex: 1; }
+.nearest-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+.nearest-date { font-size: 13px; opacity: 0.9; }
+
+/* ===== Список ДР ===== */
+.birthday-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 12px;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.birthday-emoji { font-size: 30px; }
+
+.birthday-info { flex: 1; }
+.birthday-name { font-weight: 500; font-size: 15px; }
+.birthday-date { font-size: 13px; color: #818c99; }
+
+.birthday-after {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.days-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #f0f1f3;
+  color: #818c99;
+  white-space: nowrap;
+}
+
+.days-badge.today { background: #4bb34b; color: white; font-weight: 600; }
+.days-badge.soon { background: #ffa000; color: white; font-weight: 500; }
+
+.birthday-remove {
+  background: none;
+  border: none;
+  color: #adb5bd;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+/* ===== Модалка ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-sheet {
+  background: #fff;
+  border-radius: 14px 14px 0 0;
+  width: 100%;
+  max-width: 500px;
+  padding: 0 0 env(safe-area-inset-bottom);
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e7e8ec;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #818c99;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: #818c99;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d3d9de;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+  outline: none;
+  transition: border 0.15s;
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: #2688eb;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: #2688eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+}
+
+/* ===== Пустое состояние ===== */
+.empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: #adb5bd;
+}
+
+.empty-state .empty-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* ===== Спиннер ===== */
+.spinner {
+  display: flex;
+  justify-content: center;
+  padding: 50px 0;
+}
+
+.spinner::after {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e7e8ec;
+  border-top-color: #2688eb;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Уведомление ===== */
+.snackbar {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 300;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }

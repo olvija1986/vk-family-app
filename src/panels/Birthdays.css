@@ -1,0 +1,83 @@
+.nearest-birthday {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 18px 20px;
+  color: white;
+}
+
+.nearest-emoji {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.nearest-info {
+  flex: 1;
+}
+
+.nearest-name {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.nearest-date {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.birthday-emoji {
+  font-size: 32px;
+  width: 40px;
+  text-align: center;
+}
+
+.birthday-after {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.days-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--vkui--color_background_secondary);
+  color: var(--vkui--color_text_secondary);
+  white-space: nowrap;
+}
+
+.days-badge.today {
+  background: #4bb34b;
+  color: white;
+  font-weight: 600;
+}
+
+.days-badge.soon {
+  background: #ffa000;
+  color: white;
+  font-weight: 500;
+}
+
+.birthday-remove {
+  background: none;
+  border: none;
+  color: var(--vkui--color_text_tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.birthday-remove:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.05);
+}

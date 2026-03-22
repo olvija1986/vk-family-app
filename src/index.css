@@ -736,3 +736,186 @@ body {
 .danger-btn:disabled {
   opacity: 0.7;
 }
+
+/* ===== Лесная тема (запрос UI) ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 50% 80%, rgba(76, 130, 82, 0.25), transparent 46%),
+    linear-gradient(180deg, rgba(182, 236, 193, 0.3) 0%, rgba(142, 210, 156, 0.15) 100%);
+}
+
+body::after {
+  content: '🌳';
+  position: fixed;
+  left: 50%;
+  bottom: -32px;
+  transform: translateX(-50%);
+  font-size: min(86vw, 480px);
+  line-height: 1;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: -1;
+}
+
+#root {
+  background: linear-gradient(180deg, rgba(248, 255, 249, 0.94) 0%, rgba(236, 248, 236, 0.95) 100%);
+  border-inline: 1px solid rgba(63, 120, 76, 0.08);
+}
+
+.tabbar {
+  background: #f3fbf3;
+  border-top-color: #cce7cc;
+}
+
+.tabbar-item {
+  color: #719175;
+}
+
+.tabbar-item.active {
+  color: #2f8b4e;
+}
+
+.panel-header {
+  background: rgba(245, 255, 246, 0.95);
+  border-bottom-color: #d8ecd8;
+  color: #1f6034;
+}
+
+.add-btn,
+.submit-btn,
+.toolbar-btn,
+.fatal-error button {
+  background: linear-gradient(180deg, #49b96c 0%, #2f954f 100%);
+  box-shadow: 0 7px 18px rgba(47, 149, 79, 0.26);
+  border-radius: 999px;
+}
+
+.add-btn:active,
+.submit-btn:active,
+.toolbar-btn:active,
+.toolbar-btn.active {
+  background: linear-gradient(180deg, #3da761 0%, #257d41 100%);
+}
+
+.nearest-birthday {
+  background: linear-gradient(140deg, #57bf74 0%, #2e8e4d 100%);
+}
+
+.birthday-row {
+  border-bottom-color: #e1efe1;
+}
+
+.days-badge.today {
+  background: #2f954f;
+}
+
+.tree-container {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(132, 215, 152, 0.26), transparent 34%),
+    radial-gradient(circle at 82% 62%, rgba(133, 195, 116, 0.25), transparent 37%),
+    linear-gradient(180deg, #f4fcf4 0%, #e8f5e9 100%);
+}
+
+.tree-card {
+  border: 1.5px solid #bad8bf;
+  border-radius: 64% 64% 48% 48%;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.82), transparent 44%),
+    linear-gradient(180deg, #f9fff7 0%, #e6f6e4 100%);
+  animation: leafFloat 3.6s ease-in-out infinite;
+}
+
+.tree-card-name {
+  color: #1f5f35;
+}
+
+.tree-card-relation {
+  color: #5f8a67;
+}
+
+.modal-sheet {
+  background: #f8fff8;
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: #43a865;
+  box-shadow: 0 0 0 3px rgba(67, 168, 101, 0.15);
+}
+
+.birthday-bot-card {
+  margin: 12px 16px 0;
+  border-radius: 18px;
+  padding: 14px;
+  border: 1px solid #cae8d0;
+  background: linear-gradient(180deg, #f3fff2 0%, #e8f8e8 100%);
+  box-shadow: 0 12px 24px rgba(52, 124, 72, 0.14);
+  animation: popIn 0.35s ease;
+}
+
+.birthday-bot-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.birthday-bot-icon {
+  font-size: 28px;
+}
+
+.birthday-bot-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #215e36;
+}
+
+.birthday-bot-text {
+  font-size: 13px;
+  color: #567761;
+}
+
+.birthday-bot-preview {
+  margin-top: 10px;
+  border-radius: 12px;
+  background: rgba(68, 145, 88, 0.11);
+  padding: 10px;
+  font-size: 13px;
+  color: #2a6640;
+}
+
+.birthday-bot-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.bot-action-btn {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(180deg, #4db56d 0%, #2d8c4b 100%);
+}
+
+.bot-action-btn.secondary {
+  background: #e5f4e8;
+  color: #1f6638;
+  border: 1px solid #b7dbbf;
+}
+
+@keyframes leafFloat {
+  0%, 100% { transform: translateY(0px) rotate(-1.2deg); }
+  50% { transform: translateY(-4px) rotate(1.1deg); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

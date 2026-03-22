@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { removeBirthday as apiRemoveBirthday } from '../api'
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
@@ -37,18 +37,54 @@ function plural(n) {
 
 export default function Birthdays({ birthdays, onRefresh, loading, onAddClick }) {
   const [msg, setMsg] = useState(null)
+  const [notificationEnabled, setNotificationEnabled] = useState(false)
 
   const showMsg = (text) => { setMsg(text); setTimeout(() => setMsg(null), 2000) }
 
   const handleRemove = async (id) => {
     const r = await apiRemoveBirthday(id)
-    if (r.success) { showMsg('🗑 Удалено'); onRefresh() }
+    if (r.success) { showMsg('🗑 Удалено'); onRefresh?.() }
     else { showMsg('❌ Ошибка') }
   }
 
   const sorted = [...birthdays].sort((a, b) => daysUntil(a.date) - daysUntil(b.date))
   const nearest = sorted[0]
   const nearestDays = nearest ? daysUntil(nearest.date) : null
+  const tomorrowBirthdays = useMemo(
+    () => sorted.filter((entry) => daysUntil(entry.date) === 1),
+    [sorted],
+  )
+
+  useEffect(() => {
+    if (!('Notification' in window)) return
+    setNotificationEnabled(Notification.permission === 'granted')
+  }, [])
+
+  useEffect(() => {
+    if (!notificationEnabled || !tomorrowBirthdays.length) return
+    const key = `birthday-bot-notified-${new Date().toISOString().slice(0, 10)}`
+    if (localStorage.getItem(key)) return
+
+    const names = tomorrowBirthdays.map((person) => `${person.emoji} ${person.name}`).join(', ')
+    new Notification('🌿 Бот-напоминатель', {
+      body: `Завтра день рождения у: ${names}.`,
+    })
+    localStorage.setItem(key, '1')
+  }, [notificationEnabled, tomorrowBirthdays])
+
+  const enableNotifications = async () => {
+    if (!('Notification' in window)) {
+      showMsg('⚠️ Браузер не поддерживает уведомления')
+      return
+    }
+    const permission = await Notification.requestPermission()
+    setNotificationEnabled(permission === 'granted')
+    showMsg(permission === 'granted' ? '✅ Напоминания включены' : '❌ Доступ к уведомлениям не выдан')
+  }
+
+  const openApp = () => {
+    window.open(window.location.href, '_blank', 'noopener,noreferrer')
+  }
 
   const byMonth = {}
   sorted.forEach(b => {
@@ -75,6 +111,30 @@ export default function Birthdays({ birthdays, onRefresh, loading, onAddClick })
         )}
 
         <button className="add-btn" onClick={onAddClick}>＋ Добавить день рождения</button>
+        <div className="birthday-bot-card">
+          <div className="birthday-bot-head">
+            <div className="birthday-bot-icon">🤖</div>
+            <div>
+              <div className="birthday-bot-title">Бот-напоминатель</div>
+              <div className="birthday-bot-text">
+                Сообщит за 1 день до дня рождения.
+              </div>
+            </div>
+          </div>
+          <div className="birthday-bot-preview">
+            {tomorrowBirthdays.length > 0
+              ? `Завтра поздравляем: ${tomorrowBirthdays.map((entry) => `${entry.emoji} ${entry.name}`).join(', ')}`
+              : 'Пока нет дней рождения на завтра.'}
+          </div>
+          <div className="birthday-bot-actions">
+            <button className="bot-action-btn" onClick={enableNotifications}>
+              {notificationEnabled ? '🔔 Уведомления включены' : '🔔 Включить уведомления'}
+            </button>
+            <button className="bot-action-btn secondary" onClick={openApp}>
+              🚀 Открыть app
+            </button>
+          </div>
+        </div>
 
         {loading ? (
           <div className="spinner" />

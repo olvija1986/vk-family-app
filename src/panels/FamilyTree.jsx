@@ -13,6 +13,7 @@ function layoutTree(members) {
   const SUBTREE_GAP = 36
   const LEVEL_GAP = 92
   const LEVEL_STEP = CARD_H + LEVEL_GAP
+  const BRANCH_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899']
 
   // Находим пары (супруги)
   const coupleMap = {} // id → spouseId
@@ -71,6 +72,12 @@ function layoutTree(members) {
   const subtreeCache = {}
 
   const keyFromUnit = (unitIds) => [...unitIds].sort().join('_')
+  const colorFromUnit = (unitIds) => {
+    const key = keyFromUnit(unitIds)
+    let hash = 0
+    for (let i = 0; i < key.length; i += 1) hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+    return BRANCH_COLORS[hash % BRANCH_COLORS.length]
+  }
 
   function calcMetrics(unitIds, stack = new Set()) {
     const key = keyFromUnit(unitIds)
@@ -165,10 +172,12 @@ function layoutTree(members) {
       nodePos[unitIds[1]] = { x: x2, y }
       nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
       nodes.push({ ...m2, x: x2, y, w: CARD_W, h: CARD_H })
+      const branchColor = colorFromUnit(unitIds)
       links.push({
         type: 'spouse',
         x1: x1 + CARD_W, y1: y + CARD_H / 2,
         x2: x2, y2: y + CARD_H / 2,
+        color: branchColor,
       })
     } else {
       const x1 = cx - CARD_W / 2
@@ -203,7 +212,7 @@ function layoutTree(members) {
       let childX = cx - rowW / 2 + chessOffset
       const thisRowLevel = level + 1 + ri
       const thisRowY = thisRowLevel * LEVEL_STEP
-      const rowMidY = parentBottomY + Math.min(LEVEL_GAP * 0.5, LEVEL_GAP - 14) + ri * LEVEL_STEP
+      const rowMidY = Math.max(parentBottomY + 20, thisRowY - 22)
 
       const childrenInRow = []
       row.forEach((cu) => {
@@ -221,18 +230,35 @@ function layoutTree(members) {
     })
 
     // Рисуем линии построчно: отдельная перекладина на каждый ряд детей
-    rowChildInfos.forEach(({ midY, children }) => {
+    const parentBranchColor = colorFromUnit(unitIds)
+    rowChildInfos.forEach(({ midY, children }, rowIndex) => {
+      const laneDirection = rowIndex % 2 === 0 ? -1 : 1
+      const branchSpread = Math.max(CARD_W * 0.82, children.length * (CARD_W * 0.46))
+      const laneX = cx + laneDirection * (branchSpread + rowIndex * 16)
+
       links.push({
         type: 'parent-child',
-        points: [{ x: cx, y: parentBottomY }, { x: cx, y: midY }],
+        color: parentBranchColor,
+        points: [
+          { x: cx, y: parentBottomY },
+          { x: cx, y: parentBottomY + 14 },
+          { x: laneX, y: parentBottomY + 14 },
+          { x: laneX, y: midY },
+        ],
       })
 
       if (children.length === 1) {
         const c = children[0]
-        if (cx !== c.cx) {
-          links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
-        }
-        links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
+        links.push({
+          type: 'parent-child',
+          color: parentBranchColor,
+          points: [{ x: laneX, y: midY }, { x: c.cx, y: midY }],
+        })
+        links.push({
+          type: 'parent-child',
+          color: parentBranchColor,
+          points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
+        })
         return
       }
 
@@ -241,11 +267,13 @@ function layoutTree(members) {
       const rightX = Math.max(...allCx, cx)
       links.push({
         type: 'parent-child',
-        points: [{ x: leftX, y: midY }, { x: rightX, y: midY }],
+        color: parentBranchColor,
+        points: [{ x: laneX, y: midY }, { x: leftX, y: midY }, { x: rightX, y: midY }],
       })
       children.forEach(c => {
         links.push({
           type: 'parent-child',
+          color: parentBranchColor,
           points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
         })
       })
@@ -275,7 +303,7 @@ function TreeLinks({ links }) {
             <g key={`s${i}`}>
               <line
                 x1={link.x1} y1={link.y1} x2={link.x2} y2={link.y2}
-                stroke="#ccc" strokeWidth={2.5}
+                stroke={link.color || '#ccc'} strokeWidth={3}
               />
               <text
                 x={(link.x1 + link.x2) / 2}
@@ -288,7 +316,7 @@ function TreeLinks({ links }) {
           const d = link.points.map((p, j) => `${j === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
           return (
             <path key={`p${i}`} d={d}
-              fill="none" stroke="#bbb" strokeWidth={2.5}
+              fill="none" stroke={link.color || '#bbb'} strokeWidth={2.8}
               strokeLinecap="round" strokeLinejoin="round"
             />
           )

@@ -17,26 +17,27 @@ export async function fetchAll() {
 
     const tree = (data.tree || []).map(row => ({
       id: String(row.id),
-      name: row.name,
-      relation: row.relation,
+      name: row.name || '',
+      relation: row.relation || '',
       emoji: row.emoji || '🧑',
-      parentId: row.parentId ? String(row.parentId) : null,
+      parent1Id: row.parent1Id ? String(row.parent1Id) : '',
+      parent2Id: row.parent2Id ? String(row.parent2Id) : '',
+      spouseId: row.spouseId ? String(row.spouseId) : '',
       generation: Number(row.generation) || 0,
     }))
 
     const birthdays = (data.birthdays || []).map(row => ({
       id: String(row.id),
-      name: row.name,
+      name: row.name || '',
       date: formatDateFromSheet(row.date),
       emoji: row.emoji || '🧑',
     }))
 
     localStorage.setItem(CACHE_TREE, JSON.stringify(tree))
     localStorage.setItem(CACHE_BIRTHDAYS, JSON.stringify(birthdays))
-
     return { tree, birthdays }
   } catch (err) {
-    console.error('Ошибка загрузки данных:', err)
+    console.error('Ошибка загрузки:', err)
     return {
       tree: JSON.parse(localStorage.getItem(CACHE_TREE) || '[]'),
       birthdays: JSON.parse(localStorage.getItem(CACHE_BIRTHDAYS) || '[]'),
@@ -45,8 +46,9 @@ export async function fetchAll() {
 }
 
 async function postData(body) {
-  if (!API_URL) return { success: true, id: String(Date.now()) }
-
+  if (!API_URL) {
+    return { success: true, id: String(Date.now()) }
+  }
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -55,21 +57,20 @@ async function postData(body) {
     })
     return await res.json()
   } catch (err) {
-    console.error('Ошибка отправки:', err)
     return { success: false, error: err.message }
   }
 }
 
-export async function addMember({ name, relation, emoji, parentId, generation }) {
-  return postData({ action: 'addMember', name, relation, emoji, parentId, generation })
+export async function addMember(data) {
+  return postData({ action: 'addMember', ...data })
 }
 
 export async function removeMember(id) {
   return postData({ action: 'removeMember', id })
 }
 
-export async function addBirthday({ name, date, emoji }) {
-  return postData({ action: 'addBirthday', name, date, emoji })
+export async function addBirthday(data) {
+  return postData({ action: 'addBirthday', ...data })
 }
 
 export async function removeBirthday(id) {
@@ -82,10 +83,7 @@ function formatDateFromSheet(date) {
   try {
     const d = new Date(date)
     if (!isNaN(d.getTime())) {
-      const yyyy = d.getFullYear()
-      const mm = String(d.getMonth() + 1).padStart(2, '0')
-      const dd = String(d.getDate()).padStart(2, '0')
-      return `${yyyy}-${mm}-${dd}`
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     }
   } catch (e) {}
   return String(date)

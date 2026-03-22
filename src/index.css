@@ -444,12 +444,26 @@ body {
   background-size: auto, auto, 26px 26px, auto;
 }
 
+.tree-container::before {
+  content: '🌳';
+  position: absolute;
+  left: 50%;
+  bottom: -56px;
+  transform: translateX(-50%);
+  font-size: min(92vw, 520px);
+  line-height: 1;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .tree-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 10000px;
   height: 10000px;
+  z-index: 1;
 }
 
 .tree-card {
@@ -819,6 +833,10 @@ body::after {
     radial-gradient(circle at 18% 24%, rgba(132, 215, 152, 0.26), transparent 34%),
     radial-gradient(circle at 82% 62%, rgba(133, 195, 116, 0.25), transparent 37%),
     linear-gradient(180deg, #f4fcf4 0%, #e8f5e9 100%);
+}
+
+.tree-container::before {
+  opacity: 0.09;
 }
 
 .tree-card {

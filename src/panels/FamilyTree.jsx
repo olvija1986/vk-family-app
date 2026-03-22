@@ -30,7 +30,7 @@ function layoutTree(members) {
   const CARD_W = 110
   const CARD_H = 100
   const GAP_X = 30
-  const COUPLE_GAP = 10
+  const COUPLE_GAP = 40
   const GAP_Y = 140
 
   const nodes = []
@@ -191,9 +191,9 @@ function MemberCard({ node, onRemove }) {
 }
 
 // ===== Мини-карта =====
-function Minimap({ nodes, links, viewport, treeSize, onClick }) {
-  const MINI_W = 180
-  const MINI_H = 120
+function Minimap({ nodes, links, viewport, onClick, onClose }) {
+  const MINI_W = 150
+  const MINI_H = 100
   const PAD = 20
 
   if (!nodes.length) return null
@@ -216,6 +216,7 @@ function Minimap({ nodes, links, viewport, treeSize, onClick }) {
 
   return (
     <div className="minimap" onClick={handleClick}>
+      <button className="minimap-close" onClick={(e) => { e.stopPropagation(); onClose() }}>✕</button>
       <svg width={MINI_W} height={MINI_H}>
         <g transform={`scale(${scale}) translate(${-minX}, ${-minY})`}>
           {links.map((link, i) => {
@@ -398,6 +399,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick }) 
             links={links}
             viewport={{ x: pan.x, y: pan.y, scale, containerW: containerSize.w, containerH: containerSize.h }}
             onClick={handleMinimapClick}
+            onClose={() => setShowMinimap(false)}
           />
         )}
       </div>

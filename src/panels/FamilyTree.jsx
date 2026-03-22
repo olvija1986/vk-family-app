@@ -1,245 +1,247 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { removeMember as apiRemoveMember } from '../api'
 
-// ===== Расчёт позиций узлов дерева =====
+// ===== Расчёт позиций узлов дерева (subtree layout) =====
 function layoutTree(members) {
-  if (!members.length) return { nodes: [], links: [] }
+  if (!members.length) return { nodes: [], links: [], familyBoxes: [] }
 
   const byId = {}
   members.forEach(m => { byId[m.id] = m })
 
+  const CARD_W = 80
+  const CARD_H = 95
+  const COUPLE_GAP = 16
+  const SIBLING_GAP = 12
+  const SUBTREE_GAP = 24
+  const LEVEL_GAP = 70
+
   // Находим пары (супруги)
-  const couples = []
+  const coupleMap = {} // id → spouseId
   const inCouple = new Set()
   members.forEach(m => {
     if (m.spouseId && byId[m.spouseId] && !inCouple.has(m.id)) {
-      couples.push([m.id, m.spouseId])
+      coupleMap[m.id] = m.spouseId
+      coupleMap[m.spouseId] = m.id
       inCouple.add(m.id)
       inCouple.add(m.spouseId)
     }
   })
 
-  // Группируем по поколениям
-  const gens = {}
+  // Собираем детей каждой «ячейки» (пара или одиночка)
+  // Ячейка = человек (+ супруг если есть)
+  // Дети ячейки = те, у кого parent1Id или parent2Id совпадает с id ячейки
+  function getChildren(unitIds) {
+    return members.filter(m => {
+      const p1 = m.parent1Id, p2 = m.parent2Id
+      return unitIds.some(uid => uid === p1 || uid === p2)
+    })
+  }
+
+  // Находим корни — те, у кого нет родителей в дереве
+  const hasParent = new Set()
   members.forEach(m => {
-    const g = m.generation || 0
-    if (!gens[g]) gens[g] = []
-    gens[g].push(m)
+    if (m.parent1Id && byId[m.parent1Id]) hasParent.add(m.id)
+    if (m.parent2Id && byId[m.parent2Id]) hasParent.add(m.id)
   })
 
-  const CARD_W = 110
-  const CARD_H = 100
-  const GAP_X = 40
-  const COUPLE_GAP = 40
-  const FAMILY_GAP = 70
-  const GAP_Y = 180
+  // Корневые «ячейки» — только те, кто не является ребёнком и чей супруг тоже не ребёнок
+  // Супруги детей НЕ корни — они часть ячейки своего партнёра
+  const rootCouplesDone = new Set()
+  const rootUnits = []
 
+  members.forEach(m => {
+    if (hasParent.has(m.id)) return
+    if (rootCouplesDone.has(m.id)) return
+    // Если супруг является ребёнком кого-то — не делаем корнем, он будет в поддереве
+    if (coupleMap[m.id] && hasParent.has(coupleMap[m.id])) return
+
+    rootCouplesDone.add(m.id)
+    if (coupleMap[m.id]) {
+      rootCouplesDone.add(coupleMap[m.id])
+      rootUnits.push([m.id, coupleMap[m.id]])
+    } else {
+      rootUnits.push([m.id])
+    }
+  })
+
+  const MAX_ROW = 4  // макс. ячеек в одной строке
+  const STAGGER_Y = CARD_H + 30 // сдвиг второй шахматной строки
+
+  // Рекурсивно считаем ширину поддерева
+  const subtreeWidth = {}
+  const subtreeHeight = {}
+  const subtreeCache = {}
+
+  function calcWidth(unitIds) {
+    const key = unitIds.sort().join('_')
+    if (subtreeWidth[key] !== undefined) return subtreeWidth[key]
+
+    const unitW = unitIds.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
+
+    const children = getChildren(unitIds)
+    if (!children.length) {
+      subtreeWidth[key] = unitW
+      subtreeHeight[key] = CARD_H
+      subtreeCache[key] = []
+      return unitW
+    }
+
+    const childUnits = []
+    const placed = new Set()
+    children.forEach(c => {
+      if (placed.has(c.id)) return
+      placed.add(c.id)
+      if (coupleMap[c.id] && !placed.has(coupleMap[c.id])) {
+        placed.add(coupleMap[c.id])
+        childUnits.push([c.id, coupleMap[c.id]])
+      } else {
+        childUnits.push([c.id])
+      }
+    })
+
+    subtreeCache[key] = childUnits
+
+    // Шахматная раскладка: разбиваем на строки по MAX_ROW
+    const rows = []
+    for (let i = 0; i < childUnits.length; i += MAX_ROW) {
+      rows.push(childUnits.slice(i, i + MAX_ROW))
+    }
+
+    // Ширина = макс из ширин строк
+    let maxRowW = 0
+    rows.forEach(row => {
+      let rowW = 0
+      row.forEach((cu, i) => {
+        if (i > 0) rowW += SUBTREE_GAP
+        rowW += calcWidth(cu)
+      })
+      if (rowW > maxRowW) maxRowW = rowW
+    })
+
+    subtreeWidth[key] = Math.max(unitW, maxRowW)
+    return subtreeWidth[key]
+  }
+
+  rootUnits.forEach(ru => calcWidth(ru))
+
+  // Раскладываем
   const nodes = []
   const nodePos = {}
-
-  // Размещаем по поколениям
-  const genKeys = Object.keys(gens).sort((a, b) => Number(a) - Number(b))
-
-  genKeys.forEach(g => {
-    const gen = gens[g]
-
-    // Группируем по семьям: дети одних родителей + их супруги рядом
-    const familyGroups = []
-    const placed = new Set()
-
-    // Сначала находим «семьи» — группы детей от одних родителей
-    const childrenByParents = {}
-    gen.forEach(m => {
-      const parents = [m.parent1Id, m.parent2Id].filter(p => p && byId[p]).sort()
-      if (parents.length) {
-        const key = parents.join('_')
-        if (!childrenByParents[key]) childrenByParents[key] = []
-        childrenByParents[key].push(m)
-      }
-    })
-
-    // Добавляем семьи (дети + их супруги)
-    Object.values(childrenByParents).forEach(children => {
-      const group = []
-      children.forEach(child => {
-        if (placed.has(child.id)) return
-        placed.add(child.id)
-        group.push(child)
-        // Супруг рядом
-        if (child.spouseId && byId[child.spouseId] && !placed.has(child.spouseId)) {
-          const sp = byId[child.spouseId]
-          if ((sp.generation || 0) === Number(g)) {
-            placed.add(sp.id)
-            group.push(sp)
-          }
-        }
-      })
-      if (group.length) familyGroups.push(group)
-    })
-
-    // Оставшиеся (без родителей) — каждый как своя «семья»
-    gen.forEach(m => {
-      if (placed.has(m.id)) return
-      const group = [m]
-      placed.add(m.id)
-      if (m.spouseId && byId[m.spouseId] && !placed.has(m.spouseId)) {
-        const sp = byId[m.spouseId]
-        if ((sp.generation || 0) === Number(g)) {
-          placed.add(sp.id)
-          group.push(sp)
-        }
-      }
-      familyGroups.push(group)
-    })
-
-    // Раскладываем семьи с увеличенным зазором между ними
-    let x = 0
-    const y = Number(g) * (CARD_H + GAP_Y)
-
-    familyGroups.forEach((group, gi) => {
-      if (gi > 0) x += FAMILY_GAP // большой зазор между семьями
-
-      group.forEach((m, i) => {
-        const isSecondInCouple = i > 0 && couples.some(c =>
-          (c[0] === group[i - 1].id && c[1] === m.id) ||
-          (c[1] === group[i - 1].id && c[0] === m.id)
-        )
-
-        if (isSecondInCouple) {
-          x = nodePos[group[i - 1].id].x + CARD_W + COUPLE_GAP
-        }
-
-        nodePos[m.id] = { x, y }
-        nodes.push({ ...m, x, y, w: CARD_W, h: CARD_H })
-
-        const isFirstInCouple = couples.some(c =>
-          (c[0] === m.id || c[1] === m.id) &&
-          group[i + 1] && (c[0] === group[i + 1].id || c[1] === group[i + 1].id)
-        )
-
-        x += CARD_W + (isFirstInCouple ? COUPLE_GAP : GAP_X)
-      })
-    })
-  })
-
-  // Центрируем каждое поколение
-  const maxWidth = Math.max(...genKeys.map(g => {
-    const genNodes = nodes.filter(n => (n.generation || 0) === Number(g))
-    if (!genNodes.length) return 0
-    return Math.max(...genNodes.map(n => n.x + n.w)) - Math.min(...genNodes.map(n => n.x))
-  }))
-
-  genKeys.forEach(g => {
-    const genNodes = nodes.filter(n => (n.generation || 0) === Number(g))
-    if (!genNodes.length) return
-    const minX = Math.min(...genNodes.map(n => n.x))
-    const curW = Math.max(...genNodes.map(n => n.x + n.w)) - minX
-    const offset = (maxWidth - curW) / 2 - minX
-    genNodes.forEach(n => {
-      n.x += offset
-      nodePos[n.id].x = n.x
-    })
-  })
-
-  // Строим линии связей
   const links = []
 
-  // Линии супругов (горизонтальные)
-  couples.forEach(([id1, id2]) => {
-    if (!nodePos[id1] || !nodePos[id2]) return
-    const n1 = nodePos[id1], n2 = nodePos[id2]
-    links.push({
-      type: 'spouse',
-      x1: n1.x + CARD_W, y1: n1.y + CARD_H / 2,
-      x2: n2.x, y2: n2.y + CARD_H / 2,
+  function placeUnit(unitIds, cx, y) {
+    const key = unitIds.sort().join('_')
+
+    // Размещаем саму ячейку по центру
+    if (unitIds.length === 2) {
+      const x1 = cx - CARD_W - COUPLE_GAP / 2
+      const x2 = cx + COUPLE_GAP / 2
+      const m1 = byId[unitIds[0]], m2 = byId[unitIds[1]]
+      nodePos[unitIds[0]] = { x: x1, y }
+      nodePos[unitIds[1]] = { x: x2, y }
+      nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
+      nodes.push({ ...m2, x: x2, y, w: CARD_W, h: CARD_H })
+      links.push({
+        type: 'spouse',
+        x1: x1 + CARD_W, y1: y + CARD_H / 2,
+        x2: x2, y2: y + CARD_H / 2,
+      })
+    } else {
+      const x1 = cx - CARD_W / 2
+      const m1 = byId[unitIds[0]]
+      nodePos[unitIds[0]] = { x: x1, y }
+      nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
+    }
+
+    const childUnits = subtreeCache[key]
+    if (!childUnits || !childUnits.length) return
+
+    const parentBottomY = y + CARD_H
+
+    // Разбиваем детей на строки по MAX_ROW
+    const rows = []
+    for (let i = 0; i < childUnits.length; i += MAX_ROW) {
+      rows.push(childUnits.slice(i, i + MAX_ROW))
+    }
+
+    // Для каждой строки
+    let rowY = y + CARD_H + LEVEL_GAP
+    const allChildInfo = [] // {cx, cy} для линий
+
+    rows.forEach((row, ri) => {
+      // Ширина этой строки
+      let rowW = 0
+      row.forEach((cu, i) => {
+        if (i > 0) rowW += SUBTREE_GAP
+        rowW += subtreeWidth[cu.sort().join('_')]
+      })
+
+      let childX = cx - rowW / 2
+      const thisRowY = rowY + ri * STAGGER_Y
+
+      row.forEach((cu, i) => {
+        const cuKey = cu.sort().join('_')
+        const cuW = subtreeWidth[cuKey]
+        const childCx = childX + cuW / 2
+
+        placeUnit(cu, childCx, thisRowY)
+        allChildInfo.push({ cx: childCx, y: thisRowY })
+
+        childX += cuW + SUBTREE_GAP
+      })
     })
-  })
 
-  // Группируем детей по паре родителей
-  const parentGroups = {}
-  members.forEach(m => {
-    const parents = [m.parent1Id, m.parent2Id].filter(p => p && nodePos[p]).sort()
-    if (!parents.length || !nodePos[m.id]) return
-    const key = parents.join('_')
-    if (!parentGroups[key]) parentGroups[key] = { parents, children: [] }
-    parentGroups[key].children.push(m)
-  })
+    // Рисуем линии
+    const midY = parentBottomY + LEVEL_GAP * 0.35
 
-  // Линии родитель→дети — со смещением midY для каждой группы
-  const groupsByGenGap = {}
-  Object.values(parentGroups).forEach(group => {
-    const parentGen = byId[group.parents[0]] ? (byId[group.parents[0]].generation || 0) : 0
-    const key = String(parentGen)
-    if (!groupsByGenGap[key]) groupsByGenGap[key] = []
-    groupsByGenGap[key].push(group)
-  })
+    // Вертикаль от родителей
+    links.push({
+      type: 'parent-child',
+      points: [{ x: cx, y: parentBottomY }, { x: cx, y: midY }],
+    })
 
-  Object.values(groupsByGenGap).forEach(groups => {
-    const totalGroups = groups.length
-    groups.forEach((group, groupIdx) => {
-      const { parents, children } = group
-
-      let parentCenterX, parentBottomY
-      if (parents.length === 2 && nodePos[parents[0]] && nodePos[parents[1]]) {
-        parentCenterX = (nodePos[parents[0]].x + CARD_W / 2 + nodePos[parents[1]].x + CARD_W / 2) / 2
-        parentBottomY = nodePos[parents[0]].y + CARD_H
-      } else {
-        parentCenterX = nodePos[parents[0]].x + CARD_W / 2
-        parentBottomY = nodePos[parents[0]].y + CARD_H
+    if (allChildInfo.length === 1) {
+      const c = allChildInfo[0]
+      if (cx !== c.cx) {
+        links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
       }
-
-      const childCenters = children.map(c => ({
-        x: nodePos[c.id].x + CARD_W / 2,
-        y: nodePos[c.id].y,
-      }))
-
-      const childTopY = childCenters[0].y
-      const space = childTopY - parentBottomY
-
-      // Смещаем midY для каждой группы, чтобы линии не сливались
-      const baseOffset = 0.3
-      const step = totalGroups > 1 ? 0.4 / (totalGroups - 1) : 0
-      const ratio = baseOffset + step * groupIdx
-      const midY = parentBottomY + space * ratio
-
-      // Вертикаль от родителей вниз до midY
+      links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
+    } else {
+      // Горизонтальная перекладина
+      const allCx = allChildInfo.map(c => c.cx)
+      const leftX = Math.min(...allCx, cx)
+      const rightX = Math.max(...allCx, cx)
       links.push({
         type: 'parent-child',
-        points: [
-          { x: parentCenterX, y: parentBottomY },
-          { x: parentCenterX, y: midY },
-        ],
+        points: [{ x: leftX, y: midY }, { x: rightX, y: midY }],
       })
-
-      // Горизонтальная линия
-      const allX = [...childCenters.map(c => c.x), parentCenterX]
-      const leftX = Math.min(...allX)
-      const rightX = Math.max(...allX)
-
-      if (leftX !== rightX) {
+      // Вертикали к каждому ребёнку
+      allChildInfo.forEach(c => {
         links.push({
           type: 'parent-child',
-          points: [
-            { x: leftX, y: midY },
-            { x: rightX, y: midY },
-          ],
-        })
-      }
-
-      // Вертикали от midY вниз к каждому ребёнку
-      childCenters.forEach(c => {
-        links.push({
-          type: 'parent-child',
-          points: [
-            { x: c.x, y: midY },
-            { x: c.x, y: c.y },
-          ],
+          points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
         })
       })
-    })
+    }
+  }
+
+  // Размещаем все корневые ячейки
+  let totalRootW = 0
+  rootUnits.forEach((ru, i) => {
+    if (i > 0) totalRootW += SUBTREE_GAP * 2
+    totalRootW += subtreeWidth[ru.sort().join('_')]
   })
 
-  return { nodes, links }
+  let rx = 0
+  rootUnits.forEach((ru, i) => {
+    const ruKey = ru.sort().join('_')
+    const ruW = subtreeWidth[ruKey]
+    const rcx = rx + ruW / 2
+    placeUnit(ru, rcx, 0)
+    rx += ruW + SUBTREE_GAP * 2
+  })
+
+  return { nodes, links, familyBoxes: [] }
 }
 
 // ===== SVG Линии =====
@@ -249,27 +251,28 @@ function TreeLinks({ links }) {
       {links.map((link, i) => {
         if (link.type === 'spouse') {
           return (
-            <line key={`s${i}`}
-              x1={link.x1} y1={link.y1} x2={link.x2} y2={link.y2}
-              stroke="#e74c7c" strokeWidth={2} strokeDasharray="6 3"
-            />
+            <g key={`s${i}`}>
+              <line
+                x1={link.x1} y1={link.y1} x2={link.x2} y2={link.y2}
+                stroke="#ccc" strokeWidth={2.5}
+              />
+              <text
+                x={(link.x1 + link.x2) / 2}
+                y={(link.y1 + link.y2) / 2 - 6}
+                textAnchor="middle" fontSize="12">❤️</text>
+            </g>
           )
         }
         if (link.type === 'parent-child' && link.points) {
           const d = link.points.map((p, j) => `${j === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
           return (
             <path key={`p${i}`} d={d}
-              fill="none" stroke="#2688eb" strokeWidth={2}
+              fill="none" stroke="#bbb" strokeWidth={2.5}
+              strokeLinecap="round" strokeLinejoin="round"
             />
           )
         }
         return null
-      })}
-      {/* Сердечко на супружеских связях */}
-      {links.filter(l => l.type === 'spouse').map((link, i) => {
-        const cx = (link.x1 + link.x2) / 2
-        const cy = (link.y1 + link.y2) / 2
-        return <text key={`h${i}`} x={cx} y={cy - 6} textAnchor="middle" fontSize="14">❤️</text>
       })}
     </svg>
   )
@@ -358,7 +361,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
   const [containerSize, setContainerSize] = useState({ w: 400, h: 600 })
 
-  const { nodes, links } = useMemo(() => layoutTree(members), [members])
+  const { nodes, links, familyBoxes } = useMemo(() => layoutTree(members), [members])
 
   // Авто-центрировать при загрузке
   useEffect(() => {
@@ -374,7 +377,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
     const treeH = maxY - minY
 
     const fitScale = Math.min(rect.width / (treeW + 60), rect.height / (treeH + 60), 1)
-    const clampedScale = Math.max(fitScale, 0.3)
+    const clampedScale = Math.max(fitScale, 0.15)
     const cx = -(minX + treeW / 2) * clampedScale + rect.width / 2
     const cy = -(minY + treeH / 2) * clampedScale + rect.height / 2
 
@@ -441,7 +444,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
     const treeW = maxX - minX
     const treeH = maxY - minY
     const fitScale = Math.min(rect.width / (treeW + 60), rect.height / (treeH + 60), 1)
-    const clampedScale2 = Math.max(fitScale, 0.3)
+    const clampedScale2 = Math.max(fitScale, 0.15)
     const cx = -(minX + treeW / 2) * clampedScale2 + rect.width / 2
     const cy = -(minY + treeH / 2) * clampedScale2 + rect.height / 2
     setScale(clampedScale2)

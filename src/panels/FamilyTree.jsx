@@ -7,12 +7,12 @@ function layoutTree(members) {
   const byId = {}
   members.forEach(m => { byId[m.id] = m })
 
-  const CARD_W = 95
+  const CARD_W = 90
   const CARD_H = 100
-  const COUPLE_GAP = 16
-  const SUBTREE_GAP = 44
-  const LEVEL_GAP = 140
-  const MAX_ROW = 12
+  const COUPLE_GAP = 14
+  const SUBTREE_GAP = 60
+  const LEVEL_GAP = 150
+  const MAX_ROW = 5
   const ROW_GAP = CARD_H + LEVEL_GAP
 
   // Находим пары (супруги)
@@ -94,12 +94,12 @@ function layoutTree(members) {
       return cache[key]
     }
 
-    // Разбиваем на строки по MAX_ROW карточек
+    // Разбиваем на строки по MAX_ROW карточек (пара = 2 карточки)
     const rows = []
     let currentRow = []
     let currentCards = 0
     childUnits.forEach(cu => {
-      const cards = cu.length
+      const cards = cu.length // пара = 2, одиночка = 1
       if (currentCards + cards > MAX_ROW && currentRow.length > 0) {
         rows.push(currentRow)
         currentRow = [cu]
@@ -241,30 +241,6 @@ function layoutTree(members) {
     branchColorIdx++
     placeUnit(ru, rcx, 0, branchColor)
     rx += ruW + SUBTREE_GAP * 2
-  })
-
-  // === Пост-обработка: устранение наложений ===
-  const byY = {}
-  nodes.forEach((n, i) => {
-    const roundY = Math.round(n.y / 10) * 10
-    if (!byY[roundY]) byY[roundY] = []
-    byY[roundY].push(i)
-  })
-
-  Object.values(byY).forEach(indices => {
-    if (indices.length <= 1) return
-    indices.sort((a, b) => nodes[a].x - nodes[b].x)
-    for (let i = 1; i < indices.length; i++) {
-      const prev = nodes[indices[i - 1]]
-      const curr = nodes[indices[i]]
-      const minGap = 12
-      const overlap = (prev.x + prev.w + minGap) - curr.x
-      if (overlap > 0) {
-        for (let j = i; j < indices.length; j++) {
-          nodes[indices[j]].x += overlap
-        }
-      }
-    }
   })
 
   return { nodes, links, familyBoxes: [] }

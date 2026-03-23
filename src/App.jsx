@@ -139,9 +139,9 @@ export default function App() {
           <defs>
             {/* Градиент неба */}
             <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#e8ddd0" stopOpacity="0.06"/>
-              <stop offset="50%" stopColor="#f0e8dc" stopOpacity="0.04"/>
-              <stop offset="100%" stopColor="#f5f0e8" stopOpacity="0.02"/>
+              <stop offset="0%" stopColor="#e8ddd0" stopOpacity="0.3"/>
+              <stop offset="50%" stopColor="#f0e8dc" stopOpacity="0.2"/>
+              <stop offset="100%" stopColor="#f5f0e8" stopOpacity="0.1"/>
             </linearGradient>
             {/* Градиент холмов */}
             <linearGradient id="hillGrad1" x1="0" y1="0" x2="0" y2="1">
@@ -158,20 +158,20 @@ export default function App() {
           <rect width="500" height="900" fill="url(#skyGrad)"/>
 
           {/* Облака */}
-          <g className="cloud cloud-1" opacity="0.15">
+          <g className="cloud cloud-1" opacity="0.4">
             <ellipse cx="320" cy="100" rx="65" ry="26" fill="#fff"/>
             <ellipse cx="350" cy="88" rx="48" ry="24" fill="#fff"/>
             <ellipse cx="290" cy="94" rx="42" ry="22" fill="#fff"/>
             <ellipse cx="335" cy="82" rx="35" ry="19" fill="#fff"/>
           </g>
-          <g className="cloud cloud-2" opacity="0.12">
+          <g className="cloud cloud-2" opacity="0.35">
             <ellipse cx="130" cy="60" rx="50" ry="20" fill="#fff"/>
             <ellipse cx="155" cy="50" rx="38" ry="18" fill="#fff"/>
             <ellipse cx="110" cy="55" rx="32" ry="15" fill="#fff"/>
           </g>
 
           {/* Холмы на заднем плане */}
-          <g opacity="0.14">
+          <g opacity="0.35">
             {/* Дальний холм */}
             <path d="M-50 700 Q100 620 250 670 Q400 720 550 650 L550 900 L-50 900 Z" fill="url(#hillGrad2)"/>
             {/* Ближний холм справа */}
@@ -181,7 +181,7 @@ export default function App() {
           </g>
 
           {/* Цветущее дерево — ствол и ветки — БОЛЬШОЕ */}
-          <g opacity="0.18">
+          <g opacity="0.45">
             {/* Главный ствол */}
             <path d="M145 720 Q140 620 138 550 Q136 490 140 440 Q142 410 144 380 L156 380 Q158 410 160 440 Q164 490 162 550 Q160 620 155 720 Z" fill="#4a3728"/>
             {/* Корни */}
@@ -201,7 +201,7 @@ export default function App() {
           </g>
 
           {/* Крона — цветущие розовые шарики — БОЛЬШАЯ */}
-          <g opacity="0.2">
+          <g opacity="0.5">
             {/* Основная масса — нижний слой */}
             <g className="leaf-group-1">
               <ellipse cx="150" cy="460" rx="90" ry="70" fill="#d4869a"/>

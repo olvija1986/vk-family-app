@@ -16,7 +16,10 @@ export async function fetchAll() {
   }
 
   try {
-    const res = await fetch(`${API_URL}?action=getAll`)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    const res = await fetch(`${API_URL}?action=getAll`, { signal: controller.signal })
+    clearTimeout(timeout)
     const data = await res.json()
 
     const tree = (data.tree || []).map(row => ({

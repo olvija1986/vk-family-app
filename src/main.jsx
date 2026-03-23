@@ -1,14 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import bridge from '@vkontakte/vk-bridge'
 import App from './App.jsx'
 import './index.css'
 
-// Инициализация VK Bridge (только внутри VK)
+// Инициализация VK Bridge — вызываем СРАЗУ (синхронно) до рендера
+// VK показывает свой loading-экран пока не получит VKWebAppInit
 try {
-  import('@vkontakte/vk-bridge').then(({ default: bridge }) => {
-    bridge.send('VKWebAppInit').catch(() => {})
-  }).catch(() => {})
-} catch (e) {}
+  bridge.send('VKWebAppInit').catch(() => {})
+} catch (e) {
+  // Вне VK — просто игнорируем
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

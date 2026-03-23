@@ -7,15 +7,16 @@ function layoutTree(members) {
   const byId = {}
   members.forEach(m => { byId[m.id] = m })
 
-  const CARD_W = 112
-  const CARD_H = 124
-  const COUPLE_GAP = 22
-  const SUBTREE_GAP = 36
-  const LEVEL_GAP = 92
-  const LEVEL_STEP = CARD_H + LEVEL_GAP
+  const CARD_W = 80
+  const CARD_H = 95
+  const COUPLE_GAP = 16
+  const SUBTREE_GAP = 28
+  const LEVEL_GAP = 80
+  const MAX_ROW = 5
+  const ROW_GAP = CARD_H + 40 // расстояние между рядами детей
 
   // Находим пары (супруги)
-  const coupleMap = {} // id → spouseId
+  const coupleMap = {}
   const inCouple = new Set()
   members.forEach(m => {
     if (m.spouseId && byId[m.spouseId] && !inCouple.has(m.id)) {
@@ -26,34 +27,53 @@ function layoutTree(members) {
     }
   })
 
-  // Собираем детей каждой «ячейки» (пара или одиночка)
-  // Ячейка = человек (+ супруг если есть)
-  // Дети ячейки = те, у кого parent1Id или parent2Id совпадает с id ячейки
-  function getChildren(unitIds) {
+  // Ключ ячейки без мутации массива
+  function unitKey(ids) { return [...ids].sort().join('_') }
+
+  // Ширина самой ячейки (пара или одиночка)
+  function unitSelfWidth(ids) {
+    return ids.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
+  }
+
+  // Дети ячейки
+  function getChildren(ids) {
     return members.filter(m => {
       const p1 = m.parent1Id, p2 = m.parent2Id
-      return unitIds.some(uid => uid === p1 || uid === p2)
+      return ids.some(uid => uid === p1 || uid === p2)
     })
   }
 
-  // Находим корни — те, у кого нет родителей в дереве
+  // Группируем детей в ячейки (одиночка или пара)
+  function childUnitsOf(ids) {
+    const children = getChildren(ids)
+    const units = []
+    const placed = new Set()
+    children.forEach(c => {
+      if (placed.has(c.id)) return
+      placed.add(c.id)
+      if (coupleMap[c.id] && !placed.has(coupleMap[c.id])) {
+        placed.add(coupleMap[c.id])
+        units.push([c.id, coupleMap[c.id]])
+      } else {
+        units.push([c.id])
+      }
+    })
+    return units
+  }
+
+  // Находим корни
   const hasParent = new Set()
   members.forEach(m => {
     if (m.parent1Id && byId[m.parent1Id]) hasParent.add(m.id)
     if (m.parent2Id && byId[m.parent2Id]) hasParent.add(m.id)
   })
 
-  // Корневые «ячейки» — только те, кто не является ребёнком и чей супруг тоже не ребёнок
-  // Супруги детей НЕ корни — они часть ячейки своего партнёра
   const rootCouplesDone = new Set()
   const rootUnits = []
-
   members.forEach(m => {
     if (hasParent.has(m.id)) return
     if (rootCouplesDone.has(m.id)) return
-    // Если супруг является ребёнком кого-то — не делаем корнем, он будет в поддереве
     if (coupleMap[m.id] && hasParent.has(coupleMap[m.id])) return
-
     rootCouplesDone.add(m.id)
     if (coupleMap[m.id]) {
       rootCouplesDone.add(coupleMap[m.id])
@@ -63,108 +83,66 @@ function layoutTree(members) {
     }
   })
 
-  const MAX_ROW = 4  // макс. ячеек в одной строке
+  // === Рекурсивный расчёт ширины поддерева ===
+  const cache = {} // key → { width, childUnits, rows }
 
-  // Рекурсивно считаем ширину поддерева
-  const subtreeWidth = {}
-  const subtreeDepth = {}
-  const subtreeCache = {}
+  function calcSubtree(ids) {
+    const key = unitKey(ids)
+    if (cache[key]) return cache[key]
 
-  const keyFromUnit = (unitIds) => [...unitIds].sort().join('_')
+    const selfW = unitSelfWidth(ids)
+    const childUnits = childUnitsOf(ids)
 
-  function calcMetrics(unitIds, stack = new Set()) {
-    const key = keyFromUnit(unitIds)
-    if (subtreeWidth[key] !== undefined) return { width: subtreeWidth[key], depth: subtreeDepth[key] }
-
-    if (stack.has(key)) {
-      const fallbackW = unitIds.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
-      subtreeWidth[key] = fallbackW
-      subtreeDepth[key] = 1
-      subtreeCache[key] = []
-      return { width: fallbackW, depth: 1 }
+    if (!childUnits.length) {
+      cache[key] = { width: selfW, childUnits: [], rows: [] }
+      return cache[key]
     }
 
-    const nextStack = new Set(stack)
-    nextStack.add(key)
-
-    const unitW = unitIds.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
-
-    const children = getChildren(unitIds)
-    if (!children.length) {
-      subtreeWidth[key] = unitW
-      subtreeDepth[key] = 1
-      subtreeCache[key] = []
-      return { width: unitW, depth: 1 }
-    }
-
-    const childUnits = []
-    const placed = new Set()
-    children.forEach(c => {
-      if (placed.has(c.id)) return
-      placed.add(c.id)
-      if (coupleMap[c.id] && !placed.has(coupleMap[c.id])) {
-        placed.add(coupleMap[c.id])
-        childUnits.push([c.id, coupleMap[c.id]])
-      } else {
-        childUnits.push([c.id])
-      }
-    })
-
-    subtreeCache[key] = childUnits
-
-    // Шахматная раскладка: разбиваем на строки по MAX_ROW
+    // Разбиваем на строки по MAX_ROW
     const rows = []
     for (let i = 0; i < childUnits.length; i += MAX_ROW) {
       rows.push(childUnits.slice(i, i + MAX_ROW))
     }
 
-    // Ширина = макс из ширин строк
+    // Ширина = макс ширина среди всех строк
     let maxRowW = 0
     rows.forEach(row => {
       let rowW = 0
       row.forEach((cu, i) => {
         if (i > 0) rowW += SUBTREE_GAP
-        rowW += calcMetrics(cu, nextStack).width
+        rowW += calcSubtree(cu).width
       })
-      if (rowW > maxRowW) maxRowW = rowW
+      maxRowW = Math.max(maxRowW, rowW)
     })
 
-    let maxDepth = 1
-    rows.forEach((row, ri) => {
-      row.forEach((cu) => {
-        const cuKey = keyFromUnit(cu)
-        const childDepth = subtreeDepth[cuKey]
-        const candidateDepth = 1 + ri + childDepth
-        if (candidateDepth > maxDepth) maxDepth = candidateDepth
-      })
-    })
-
-    subtreeWidth[key] = Math.max(unitW, maxRowW)
-    subtreeDepth[key] = maxDepth
-    return { width: subtreeWidth[key], depth: subtreeDepth[key] }
+    const totalW = Math.max(selfW, maxRowW)
+    cache[key] = { width: totalW, childUnits, rows }
+    return cache[key]
   }
 
-  rootUnits.forEach(ru => calcMetrics(ru))
+  rootUnits.forEach(ru => calcSubtree(ru))
 
-  // Раскладываем
+  // === Размещение ===
   const nodes = []
-  const nodePos = {}
   const links = []
+  const placedIds = new Set()
 
-  function placeUnit(unitIds, cx, level) {
-    const key = keyFromUnit(unitIds)
+  function placeUnit(ids, cx, y) {
+    const key = unitKey(ids)
 
-    const y = level * LEVEL_STEP
-
-    // Размещаем саму ячейку по центру
-    if (unitIds.length === 2) {
+    // Размещаем ячейку
+    if (ids.length === 2) {
       const x1 = cx - CARD_W - COUPLE_GAP / 2
       const x2 = cx + COUPLE_GAP / 2
-      const m1 = byId[unitIds[0]], m2 = byId[unitIds[1]]
-      nodePos[unitIds[0]] = { x: x1, y }
-      nodePos[unitIds[1]] = { x: x2, y }
-      nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
-      nodes.push({ ...m2, x: x2, y, w: CARD_W, h: CARD_H })
+      const m1 = byId[ids[0]], m2 = byId[ids[1]]
+      if (m1 && !placedIds.has(ids[0])) {
+        placedIds.add(ids[0])
+        nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
+      }
+      if (m2 && !placedIds.has(ids[1])) {
+        placedIds.add(ids[1])
+        nodes.push({ ...m2, x: x2, y, w: CARD_W, h: CARD_H })
+      }
       links.push({
         type: 'spouse',
         x1: x1 + CARD_W, y1: y + CARD_H / 2,
@@ -172,89 +150,123 @@ function layoutTree(members) {
       })
     } else {
       const x1 = cx - CARD_W / 2
-      const m1 = byId[unitIds[0]]
-      nodePos[unitIds[0]] = { x: x1, y }
-      nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
+      const m1 = byId[ids[0]]
+      if (m1 && !placedIds.has(ids[0])) {
+        placedIds.add(ids[0])
+        nodes.push({ ...m1, x: x1, y, w: CARD_W, h: CARD_H })
+      }
     }
 
-    const childUnits = subtreeCache[key]
-    if (!childUnits || !childUnits.length) return
+    const { rows } = cache[key]
+    if (!rows.length) return
 
     const parentBottomY = y + CARD_H
+    const firstRowY = y + CARD_H + LEVEL_GAP
 
-    // Разбиваем детей на строки по MAX_ROW
-    const rows = []
-    for (let i = 0; i < childUnits.length; i += MAX_ROW) {
-      rows.push(childUnits.slice(i, i + MAX_ROW))
-    }
-
-    // Для каждой строки
-    const allChildInfo = [] // {cx, cy} для линий
+    // Размещаем каждую строку детей
+    const allChildInfo = [] // { cx, y, rowIdx }
 
     rows.forEach((row, ri) => {
-      // Ширина этой строки
+      const thisRowY = firstRowY + ri * ROW_GAP
+
+      // Считаем ширину этой строки
       let rowW = 0
       row.forEach((cu, i) => {
         if (i > 0) rowW += SUBTREE_GAP
-        rowW += subtreeWidth[keyFromUnit(cu)]
+        rowW += calcSubtree(cu).width
       })
 
-      const chessOffset = ri % 2 === 1 ? Math.min(CARD_W * 0.55, rowW * 0.18) : 0
-      let childX = cx - rowW / 2 + chessOffset
-      const thisRowLevel = level + 1 + ri
-      const thisRowY = thisRowLevel * LEVEL_STEP
+      // Центрируем строку под родителем
+      let childX = cx - rowW / 2
 
       row.forEach((cu) => {
-        const cuKey = keyFromUnit(cu)
-        const cuW = subtreeWidth[cuKey]
+        const cuW = calcSubtree(cu).width
         const childCx = childX + cuW / 2
-
-        placeUnit(cu, childCx, thisRowLevel)
-        allChildInfo.push({ cx: childCx, y: thisRowY })
-
+        placeUnit(cu, childCx, thisRowY)
+        allChildInfo.push({ cx: childCx, y: thisRowY, rowIdx: ri })
         childX += cuW + SUBTREE_GAP
       })
     })
 
-    // Рисуем линии
-    const midY = parentBottomY + Math.min(LEVEL_GAP * 0.5, LEVEL_GAP - 14)
+    // === Рисуем линии ===
+    const midY = parentBottomY + LEVEL_GAP * 0.35
 
-    // Вертикаль от родителей
+    // Вертикаль от родителя вниз
     links.push({
       type: 'parent-child',
       points: [{ x: cx, y: parentBottomY }, { x: cx, y: midY }],
     })
 
-    if (allChildInfo.length === 1) {
-      const c = allChildInfo[0]
-      if (cx !== c.cx) {
-        links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
-      }
-      links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
-    } else {
-      // Горизонтальная перекладина
-      const allCx = allChildInfo.map(c => c.cx)
-      const leftX = Math.min(...allCx, cx)
-      const rightX = Math.max(...allCx, cx)
-      links.push({
-        type: 'parent-child',
-        points: [{ x: leftX, y: midY }, { x: rightX, y: midY }],
-      })
-      // Вертикали к каждому ребёнку
-      allChildInfo.forEach(c => {
-        links.push({
-          type: 'parent-child',
-          points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }],
+    // Если только одна строка — простая горизонтальная перекладина
+    if (rows.length === 1) {
+      const rowChildren = allChildInfo
+      if (rowChildren.length === 1) {
+        const c = rowChildren[0]
+        if (cx !== c.cx) {
+          links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
+        }
+        links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
+      } else {
+        const allCx = rowChildren.map(c => c.cx)
+        const leftX = Math.min(...allCx, cx)
+        const rightX = Math.max(...allCx, cx)
+        links.push({ type: 'parent-child', points: [{ x: leftX, y: midY }, { x: rightX, y: midY }] })
+        rowChildren.forEach(c => {
+          links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
         })
+      }
+    } else {
+      // Несколько строк — для каждой строки своя перекладина
+      // Общая вертикаль от родителя до самой нижней перекладины
+      const firstRowChildren = allChildInfo.filter(c => c.rowIdx === 0)
+      const laterRowChildren = allChildInfo.filter(c => c.rowIdx > 0)
+
+      // Первая строка — стандартная перекладина
+      const allFirstCx = firstRowChildren.map(c => c.cx)
+      const leftX1 = Math.min(...allFirstCx, cx)
+      const rightX1 = Math.max(...allFirstCx, cx)
+      links.push({ type: 'parent-child', points: [{ x: leftX1, y: midY }, { x: rightX1, y: midY }] })
+      firstRowChildren.forEach(c => {
+        links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
+      })
+
+      // Для каждой доп. строки — отдельная перекладина ниже
+      const rowGroups = {}
+      laterRowChildren.forEach(c => {
+        if (!rowGroups[c.rowIdx]) rowGroups[c.rowIdx] = []
+        rowGroups[c.rowIdx].push(c)
+      })
+
+      Object.keys(rowGroups).forEach(ri => {
+        const group = rowGroups[ri]
+        const rowMidY = group[0].y - LEVEL_GAP * 0.65
+
+        // Вертикаль от основной перекладины до этой
+        links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: cx, y: rowMidY }] })
+
+        if (group.length === 1) {
+          const c = group[0]
+          if (cx !== c.cx) {
+            links.push({ type: 'parent-child', points: [{ x: cx, y: rowMidY }, { x: c.cx, y: rowMidY }] })
+          }
+          links.push({ type: 'parent-child', points: [{ x: c.cx, y: rowMidY }, { x: c.cx, y: c.y }] })
+        } else {
+          const allCx = group.map(c => c.cx)
+          const leftX = Math.min(...allCx, cx)
+          const rightX = Math.max(...allCx, cx)
+          links.push({ type: 'parent-child', points: [{ x: leftX, y: rowMidY }, { x: rightX, y: rowMidY }] })
+          group.forEach(c => {
+            links.push({ type: 'parent-child', points: [{ x: c.cx, y: rowMidY }, { x: c.cx, y: c.y }] })
+          })
+        }
       })
     }
   }
 
-  // Размещаем все корневые ячейки
+  // Размещаем корневые ячейки
   let rx = 0
   rootUnits.forEach((ru) => {
-    const ruKey = keyFromUnit(ru)
-    const ruW = subtreeWidth[ruKey]
+    const ruW = calcSubtree(ru).width
     const rcx = rx + ruW / 2
     placeUnit(ru, rcx, 0)
     rx += ruW + SUBTREE_GAP * 2
@@ -344,13 +356,13 @@ function Minimap({ nodes, links, viewport, onClick, onClose }) {
             }
             if (link.type === 'parent-child' && link.points) {
               const d = link.points.map((p, j) => `${j===0?'M':'L'} ${p.x} ${p.y}`).join(' ')
-              return <path key={i} d={d} fill="none" stroke="#2688eb" strokeWidth={1/scale} />
+              return <path key={i} d={d} fill="none" stroke="#43a047" strokeWidth={1/scale} />
             }
             return null
           })}
           {nodes.map(n => (
             <rect key={n.id} x={n.x} y={n.y} width={n.w} height={n.h} rx={4}
-              fill="#dbeafe" stroke="#2688eb" strokeWidth={1/scale} />
+              fill="#e8f5e9" stroke="#43a047" strokeWidth={1/scale} />
           ))}
           {/* Viewport rectangle */}
           <rect
@@ -358,8 +370,8 @@ function Minimap({ nodes, links, viewport, onClick, onClose }) {
             y={-viewport.y / viewport.scale}
             width={viewport.containerW / viewport.scale}
             height={viewport.containerH / viewport.scale}
-            fill="rgba(38,136,235,0.15)"
-            stroke="#2688eb"
+            fill="rgba(67,160,71,0.15)"
+            stroke="#43a047"
             strokeWidth={2/scale}
           />
         </g>
@@ -369,7 +381,8 @@ function Minimap({ nodes, links, viewport, onClick, onClose }) {
 }
 
 // ===== Главный компонент =====
-export default function FamilyTree({ members, loading, onAddClick, onCardClick }) {
+export default function FamilyTree({ members, onRefresh, loading, onAddClick, onCardClick }) {
+  const [msg, setMsg] = useState(null)
   const [showMinimap, setShowMinimap] = useState(false)
   const containerRef = useRef(null)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -378,7 +391,7 @@ export default function FamilyTree({ members, loading, onAddClick, onCardClick }
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
   const [containerSize, setContainerSize] = useState({ w: 400, h: 600 })
 
-  const { nodes, links } = useMemo(() => layoutTree(members), [members])
+  const { nodes, links, familyBoxes } = useMemo(() => layoutTree(members), [members])
 
   // Авто-центрировать при загрузке
   useEffect(() => {
@@ -401,6 +414,8 @@ export default function FamilyTree({ members, loading, onAddClick, onCardClick }
     setScale(clampedScale)
     setPan({ x: cx, y: cy })
   }, [nodes])
+
+  const showMessage = (text) => { setMsg(text); setTimeout(() => setMsg(null), 2000) }
 
   // Drag / pan
   const onPointerDown = useCallback((e) => {
@@ -466,7 +481,7 @@ export default function FamilyTree({ members, loading, onAddClick, onCardClick }
       <div className="panel-content" style={{ position: 'relative', overflow: 'hidden' }}>
         {/* Тулбар */}
         <div className="tree-toolbar">
-          <button className="add-btn" style={{ margin: '8px 12px', width: 'auto', flex: 1 }} onClick={onAddClick}>＋ Добавить</button>
+          <button className="add-btn" style={{ flex: 1 }} onClick={onAddClick}>＋ Добавить</button>
           <button className="toolbar-btn" onClick={() => handleZoom(0.2)} title="Увеличить">🔍+</button>
           <button className="toolbar-btn" onClick={() => handleZoom(-0.2)} title="Уменьшить">🔍−</button>
           <button className="toolbar-btn" onClick={fitAll} title="Показать всё">📋</button>
@@ -495,8 +510,8 @@ export default function FamilyTree({ members, loading, onAddClick, onCardClick }
               transformOrigin: '0 0',
             }}>
               <TreeLinks links={links} />
-              {nodes.map(node => (
-                <MemberCard key={node.id} node={node} onClick={onCardClick} />
+              {nodes.map((node, idx) => (
+                <MemberCard key={`${node.id}_${idx}`} node={node} onClick={onCardClick} />
               ))}
             </div>
           </div>
@@ -513,6 +528,7 @@ export default function FamilyTree({ members, loading, onAddClick, onCardClick }
           />
         )}
       </div>
+      {msg && <div className="snackbar">{msg}</div>}
     </div>
   )
 }

@@ -31,22 +31,6 @@ function Modal({ title, onClose, children }) {
   )
 }
 
-
-function LoadingScreen() {
-  return (
-    <div className="loading-screen" role="status" aria-live="polite">
-      <div className="loading-tree">
-        <div className="loading-leaf leaf-1">🍃</div>
-        <div className="loading-leaf leaf-2">🍃</div>
-        <div className="loading-trunk" />
-        <div className="loading-crown" />
-      </div>
-      <div className="loading-title">Загружаем семейное дерево</div>
-      <div className="loading-subtitle">Лёгкий ветер уже шевелит ветви 🌿</div>
-    </div>
-  )
-}
-
 export default function App() {
   const [tab, setTab] = useState('tree')
   const [members, setMembers] = useState([])
@@ -73,11 +57,10 @@ export default function App() {
     setLoading(false)
   }, [])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData() }, [loadData])
 
   const handleAddMember = async () => {
-    if (!memberForm.name.trim() || saving) return
+    if (!memberForm.name.trim()) return
     setSaving(true)
 
     // Определяем поколение
@@ -97,21 +80,6 @@ export default function App() {
       parent2Id: memberForm.parent2Id || '',
       spouseId: memberForm.spouseId || '',
       generation,
-    }
-
-    // Защита от дублей (двойной тап / повторная отправка)
-    const duplicate = members.some(m =>
-      m.name.trim().toLowerCase() === newMember.name.toLowerCase()
-      && m.relation === newMember.relation
-      && (m.parent1Id || '') === newMember.parent1Id
-      && (m.parent2Id || '') === newMember.parent2Id
-      && (m.spouseId || '') === newMember.spouseId
-    )
-
-    if (duplicate) {
-      setSaving(false)
-      setModal(null)
-      return
     }
 
     // Сохраняем
@@ -143,7 +111,7 @@ export default function App() {
   }
 
   const handleAddBirthday = async () => {
-    if (!bdayForm.name.trim() || !bdayForm.date || saving) return
+    if (!bdayForm.name.trim() || !bdayForm.date) return
     setSaving(true)
 
     const id = String(Date.now())
@@ -159,27 +127,16 @@ export default function App() {
     setModal(null)
   }
 
-
-  const handleDeleteMember = async () => {
-    if (!selectedMember) return
-    setSaving(true)
-    await removeMember(selectedMember.id)
-    await loadData()
-    setSaving(false)
-    setModal(null)
-    setSelectedMember(null)
-  }
-
   const memberOptions = members.map(m => (
     <option key={m.id} value={m.id}>{m.emoji} {m.name} ({m.relation})</option>
   ))
 
   return (
     <>
-      {loading && <LoadingScreen />}
       {tab === 'tree' && (
         <FamilyTree
           members={members}
+          onRefresh={loadData}
           loading={loading}
           onAddClick={() => setModal('member')}
           onCardClick={(member) => { setSelectedMember(member); setModal('detail') }}
@@ -188,9 +145,9 @@ export default function App() {
       {tab === 'birthdays' && (
         <Birthdays
           birthdays={birthdays}
+          onRefresh={loadData}
           loading={loading}
           onAddClick={() => setModal('birthday')}
-          onRefresh={loadData}
         />
       )}
 
@@ -315,8 +272,18 @@ export default function App() {
               </button>
             )}
 
-            <button className="danger-btn" onClick={handleDeleteMember} disabled={saving}>
-              {saving ? 'Удаляю...' : '🗑 Удалить члена семьи'}
+            <button className="delete-btn" onClick={async () => {
+              if (!confirm(`Удалить ${selectedMember.name}?`)) return
+              const r = await removeMember(selectedMember.id)
+              if (r.success) {
+                const updated = members.filter(m => m.id !== selectedMember.id)
+                localStorage.setItem('family_tree_cache', JSON.stringify(updated))
+                setMembers(updated)
+              }
+              setSelectedMember(null)
+              setModal(null)
+            }}>
+              Удалить из дерева
             </button>
           </Modal>
         )

@@ -12,7 +12,7 @@ function layoutTree(members) {
   const COUPLE_GAP = 14
   const SUBTREE_GAP = 60
   const LEVEL_GAP = 150
-  const MAX_ROW = 5
+  const MAX_ROW = 8
   const ROW_GAP = CARD_H + LEVEL_GAP
 
   // Находим пары (супруги)

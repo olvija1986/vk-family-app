@@ -58,11 +58,15 @@ async function postData(body) {
     return { success: true, id: String(Date.now()) }
   }
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(body),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
     return await res.json()
   } catch (err) {
     console.error('Ошибка отправки:', err)

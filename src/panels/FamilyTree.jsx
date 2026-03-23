@@ -13,7 +13,7 @@ function layoutTree(members) {
   const SUBTREE_GAP = 28
   const LEVEL_GAP = 80
   const MAX_ROW = 5
-  const ROW_GAP = CARD_H + 40 // расстояние между рядами детей
+  const ROW_GAP = CARD_H + 80 // расстояние между рядами детей (с запасом для линий)
 
   // Находим пары (супруги)
   const coupleMap = {}
@@ -98,11 +98,22 @@ function layoutTree(members) {
       return cache[key]
     }
 
-    // Разбиваем на строки по MAX_ROW
+    // Разбиваем на строки по MAX_ROW карточек (пара = 2 карточки)
     const rows = []
-    for (let i = 0; i < childUnits.length; i += MAX_ROW) {
-      rows.push(childUnits.slice(i, i + MAX_ROW))
-    }
+    let currentRow = []
+    let currentCards = 0
+    childUnits.forEach(cu => {
+      const cards = cu.length // 1 для одиночки, 2 для пары
+      if (currentCards + cards > MAX_ROW && currentRow.length > 0) {
+        rows.push(currentRow)
+        currentRow = [cu]
+        currentCards = cards
+      } else {
+        currentRow.push(cu)
+        currentCards += cards
+      }
+    })
+    if (currentRow.length) rows.push(currentRow)
 
     // Ширина = макс ширина среди всех строк
     let maxRowW = 0
@@ -122,12 +133,46 @@ function layoutTree(members) {
 
   rootUnits.forEach(ru => calcSubtree(ru))
 
+  // Палитра цветов для веток
+  const BRANCH_COLORS = [
+    '#43a047', '#e67c30', '#5c6bc0', '#ec407a', '#26a69a',
+    '#ab47bc', '#f44336', '#2196f3', '#ff9800', '#8d6e63',
+  ]
+  let branchColorIdx = 0
+
   // === Размещение ===
   const nodes = []
   const links = []
   const placedIds = new Set()
 
-  function placeUnit(ids, cx, y) {
+  // Глобальный счётчик карточек (не ячеек!) на каждом уровне Y
+  const levelCount = {} // y → количество карточек
+
+  function countCardsAtLevel(y, unitList) {
+    if (!levelCount[y]) levelCount[y] = 0
+    // Пара = 2 карточки, одиночка = 1
+    unitList.forEach(cu => { levelCount[y] += cu.length })
+  }
+
+  function getCardsAtLevel(y) {
+    return levelCount[y] || 0
+  }
+
+  // Сколько карточек в списке ячеек
+  function countCards(unitList) {
+    return unitList.reduce((s, cu) => s + cu.length, 0)
+  }
+
+  // Найти свободный Y-уровень, чтобы добавить n карточек (макс MAX_ROW карточек на уровне)
+  function findFreeY(targetY, nCards) {
+    let y = targetY
+    while (getCardsAtLevel(y) + nCards > MAX_ROW) {
+      y += ROW_GAP
+    }
+    return y
+  }
+
+  function placeUnit(ids, cx, y, color) {
     const key = unitKey(ids)
 
     // Размещаем ячейку
@@ -147,6 +192,7 @@ function layoutTree(members) {
         type: 'spouse',
         x1: x1 + CARD_W, y1: y + CARD_H / 2,
         x2: x2, y2: y + CARD_H / 2,
+        color,
       })
     } else {
       const x1 = cx - CARD_W / 2
@@ -161,13 +207,17 @@ function layoutTree(members) {
     if (!rows.length) return
 
     const parentBottomY = y + CARD_H
-    const firstRowY = y + CARD_H + LEVEL_GAP
+    const baseRowY = y + CARD_H + LEVEL_GAP
 
-    // Размещаем каждую строку детей
+    // Размещаем каждую строку детей с учётом глобального лимита
     const allChildInfo = [] // { cx, y, rowIdx }
 
     rows.forEach((row, ri) => {
-      const thisRowY = firstRowY + ri * ROW_GAP
+      const targetY = baseRowY + ri * ROW_GAP
+
+      // Проверяем, влезает ли эта группа на целевой уровень (считаем карточки, не ячейки)
+      const nCards = countCards(row)
+      const actualY = findFreeY(targetY, nCards)
 
       // Считаем ширину этой строки
       let rowW = 0
@@ -179,97 +229,115 @@ function layoutTree(members) {
       // Центрируем строку под родителем
       let childX = cx - rowW / 2
 
+      // Регистрируем занятость уровня
+      countCardsAtLevel(actualY, row)
+
       row.forEach((cu) => {
         const cuW = calcSubtree(cu).width
         const childCx = childX + cuW / 2
-        placeUnit(cu, childCx, thisRowY)
-        allChildInfo.push({ cx: childCx, y: thisRowY, rowIdx: ri })
+        placeUnit(cu, childCx, actualY, color)
+        allChildInfo.push({ cx: childCx, y: actualY, rowIdx: ri })
         childX += cuW + SUBTREE_GAP
       })
     })
 
     // === Рисуем линии ===
     const midY = parentBottomY + LEVEL_GAP * 0.35
+    const addLine = (pts) => links.push({ type: 'parent-child', points: pts, color })
 
     // Вертикаль от родителя вниз
-    links.push({
-      type: 'parent-child',
-      points: [{ x: cx, y: parentBottomY }, { x: cx, y: midY }],
-    })
+    addLine([{ x: cx, y: parentBottomY }, { x: cx, y: midY }])
 
     // Если только одна строка — простая горизонтальная перекладина
     if (rows.length === 1) {
       const rowChildren = allChildInfo
       if (rowChildren.length === 1) {
         const c = rowChildren[0]
-        if (cx !== c.cx) {
-          links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: c.cx, y: midY }] })
-        }
-        links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
+        if (cx !== c.cx) addLine([{ x: cx, y: midY }, { x: c.cx, y: midY }])
+        addLine([{ x: c.cx, y: midY }, { x: c.cx, y: c.y }])
       } else {
         const allCx = rowChildren.map(c => c.cx)
         const leftX = Math.min(...allCx, cx)
         const rightX = Math.max(...allCx, cx)
-        links.push({ type: 'parent-child', points: [{ x: leftX, y: midY }, { x: rightX, y: midY }] })
-        rowChildren.forEach(c => {
-          links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
-        })
+        addLine([{ x: leftX, y: midY }, { x: rightX, y: midY }])
+        rowChildren.forEach(c => addLine([{ x: c.cx, y: midY }, { x: c.cx, y: c.y }]))
       }
     } else {
-      // Несколько строк — для каждой строки своя перекладина
-      // Общая вертикаль от родителя до самой нижней перекладины
-      const firstRowChildren = allChildInfo.filter(c => c.rowIdx === 0)
-      const laterRowChildren = allChildInfo.filter(c => c.rowIdx > 0)
+      const yGroups = {}
+      allChildInfo.forEach(c => {
+        if (!yGroups[c.y]) yGroups[c.y] = []
+        yGroups[c.y].push(c)
+      })
 
-      // Первая строка — стандартная перекладина
-      const allFirstCx = firstRowChildren.map(c => c.cx)
+      const sortedYs = Object.keys(yGroups).map(Number).sort((a, b) => a - b)
+
+      const firstGroup = yGroups[sortedYs[0]]
+      const allFirstCx = firstGroup.map(c => c.cx)
       const leftX1 = Math.min(...allFirstCx, cx)
       const rightX1 = Math.max(...allFirstCx, cx)
-      links.push({ type: 'parent-child', points: [{ x: leftX1, y: midY }, { x: rightX1, y: midY }] })
-      firstRowChildren.forEach(c => {
-        links.push({ type: 'parent-child', points: [{ x: c.cx, y: midY }, { x: c.cx, y: c.y }] })
-      })
+      addLine([{ x: leftX1, y: midY }, { x: rightX1, y: midY }])
+      firstGroup.forEach(c => addLine([{ x: c.cx, y: midY }, { x: c.cx, y: c.y }]))
 
-      // Для каждой доп. строки — отдельная перекладина ниже
-      const rowGroups = {}
-      laterRowChildren.forEach(c => {
-        if (!rowGroups[c.rowIdx]) rowGroups[c.rowIdx] = []
-        rowGroups[c.rowIdx].push(c)
-      })
+      let prevRowY = sortedYs[0]
+      for (let si = 1; si < sortedYs.length; si++) {
+        const groupY = sortedYs[si]
+        const group = yGroups[groupY]
+        const prevCardsBottom = prevRowY + CARD_H
+        const rowMidY = prevCardsBottom + (groupY - prevCardsBottom) / 2
 
-      Object.keys(rowGroups).forEach(ri => {
-        const group = rowGroups[ri]
-        const rowMidY = group[0].y - LEVEL_GAP * 0.65
+        addLine([{ x: cx, y: prevCardsBottom }, { x: cx, y: rowMidY }])
 
-        // Вертикаль от основной перекладины до этой
-        links.push({ type: 'parent-child', points: [{ x: cx, y: midY }, { x: cx, y: rowMidY }] })
+        const allCx = group.map(c => c.cx)
+        const leftX = Math.min(...allCx)
+        const rightX = Math.max(...allCx)
+        if (leftX !== rightX) addLine([{ x: leftX, y: rowMidY }, { x: rightX, y: rowMidY }])
+        const nearestX = Math.max(leftX, Math.min(rightX, cx))
+        if (cx !== nearestX) addLine([{ x: cx, y: rowMidY }, { x: nearestX, y: rowMidY }])
+        group.forEach(c => addLine([{ x: c.cx, y: rowMidY }, { x: c.cx, y: c.y }]))
 
-        if (group.length === 1) {
-          const c = group[0]
-          if (cx !== c.cx) {
-            links.push({ type: 'parent-child', points: [{ x: cx, y: rowMidY }, { x: c.cx, y: rowMidY }] })
-          }
-          links.push({ type: 'parent-child', points: [{ x: c.cx, y: rowMidY }, { x: c.cx, y: c.y }] })
-        } else {
-          const allCx = group.map(c => c.cx)
-          const leftX = Math.min(...allCx, cx)
-          const rightX = Math.max(...allCx, cx)
-          links.push({ type: 'parent-child', points: [{ x: leftX, y: rowMidY }, { x: rightX, y: rowMidY }] })
-          group.forEach(c => {
-            links.push({ type: 'parent-child', points: [{ x: c.cx, y: rowMidY }, { x: c.cx, y: c.y }] })
-          })
-        }
-      })
+        prevRowY = groupY
+      }
     }
   }
 
-  // Размещаем корневые ячейки
+  // Размещаем корневые ячейки — каждая ветка получает свой цвет
   let rx = 0
   rootUnits.forEach((ru) => {
     const ruW = calcSubtree(ru).width
     const rcx = rx + ruW / 2
-    placeUnit(ru, rcx, 0)
+    const branchColor = BRANCH_COLORS[branchColorIdx % BRANCH_COLORS.length]
+    branchColorIdx++
+    placeUnit(ru, rcx, 0, branchColor)
     rx += ruW + SUBTREE_GAP * 2
+  })
+
+  // === Пост-обработка: устранение наложений ===
+  // Группируем узлы по Y-уровню и проверяем горизонтальные наложения
+  const byY = {}
+  nodes.forEach((n, i) => {
+    // Округляем Y для группировки (±5px = один ряд)
+    const roundY = Math.round(n.y / 10) * 10
+    if (!byY[roundY]) byY[roundY] = []
+    byY[roundY].push(i)
+  })
+
+  Object.values(byY).forEach(indices => {
+    if (indices.length <= 1) return
+    // Сортируем по X
+    indices.sort((a, b) => nodes[a].x - nodes[b].x)
+    // Проверяем перекрытия и раздвигаем
+    for (let i = 1; i < indices.length; i++) {
+      const prev = nodes[indices[i - 1]]
+      const curr = nodes[indices[i]]
+      const minGap = 8 // минимальный зазор между карточками
+      const overlap = (prev.x + prev.w + minGap) - curr.x
+      if (overlap > 0) {
+        // Сдвигаем текущую и все последующие карточки вправо
+        for (let j = i; j < indices.length; j++) {
+          nodes[indices[j]].x += overlap
+        }
+      }
+    }
   })
 
   return { nodes, links, familyBoxes: [] }
@@ -285,7 +353,7 @@ function TreeLinks({ links }) {
             <g key={`s${i}`}>
               <line
                 x1={link.x1} y1={link.y1} x2={link.x2} y2={link.y2}
-                stroke="#ccc" strokeWidth={2.5}
+                stroke={link.color || '#ccc'} strokeWidth={2.5} strokeOpacity={0.5}
               />
               <text
                 x={(link.x1 + link.x2) / 2}
@@ -298,8 +366,9 @@ function TreeLinks({ links }) {
           const d = link.points.map((p, j) => `${j === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
           return (
             <path key={`p${i}`} d={d}
-              fill="none" stroke="#bbb" strokeWidth={2.5}
+              fill="none" stroke={link.color || '#bbb'} strokeWidth={2.5}
               strokeLinecap="round" strokeLinejoin="round"
+              strokeOpacity={0.6}
             />
           )
         }

@@ -21,21 +21,68 @@ body {
   position: relative;
 }
 
-/* Большое дерево на фоне */
-#root::before {
-  content: '';
+/* ===== Анимированный фон: пейзаж ===== */
+
+/* Контейнер анимированного фона — ЗА карточками */
+.animated-bg {
   position: fixed;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 500px;
   height: 100vh;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 700'%3E%3Cg opacity='0.045'%3E%3Crect x='190' y='350' width='20' height='300' rx='6' fill='%23795548'/%3E%3Crect x='175' y='500' width='12' height='120' rx='4' fill='%23795548' transform='rotate(-20 181 560)'/%3E%3Crect x='213' y='480' width='10' height='100' rx='4' fill='%23795548' transform='rotate(15 218 530)'/%3E%3Cellipse cx='200' cy='320' rx='130' ry='110' fill='%232e7d32'/%3E%3Cellipse cx='150' cy='280' rx='80' ry='70' fill='%2343a047'/%3E%3Cellipse cx='260' cy='290' rx='75' ry='65' fill='%2343a047'/%3E%3Cellipse cx='200' cy='240' rx='90' ry='75' fill='%234caf50'/%3E%3Cellipse cx='160' cy='220' rx='55' ry='50' fill='%2366bb6a'/%3E%3Cellipse cx='240' cy='230' rx='50' ry='45' fill='%2366bb6a'/%3E%3Cellipse cx='200' cy='190' rx='60' ry='50' fill='%2381c784'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: 400px 700px;
   pointer-events: none;
   z-index: 0;
+  overflow: hidden;
+}
+
+.animated-bg svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Колышущаяся листва цветущего дерева */
+.leaf-group-1 { animation: sway1 4s ease-in-out infinite; transform-origin: 50% 100%; }
+.leaf-group-2 { animation: sway2 5s ease-in-out 0.5s infinite; transform-origin: 40% 100%; }
+.leaf-group-3 { animation: sway3 6s ease-in-out 1s infinite; transform-origin: 60% 100%; }
+.leaf-group-4 { animation: sway1 4.5s ease-in-out 1.5s infinite; transform-origin: 45% 100%; }
+.leaf-group-5 { animation: sway2 5.5s ease-in-out 0.3s infinite; transform-origin: 55% 100%; }
+.leaf-group-6 { animation: sway3 3.8s ease-in-out 0.8s infinite; transform-origin: 50% 95%; }
+
+@keyframes sway1 {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(1.5deg) scale(1.01); }
+  75% { transform: rotate(-1.2deg) scale(0.99); }
+}
+
+@keyframes sway2 {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-2deg); }
+  70% { transform: rotate(1.5deg); }
+}
+
+@keyframes sway3 {
+  0%, 100% { transform: rotate(0.5deg); }
+  50% { transform: rotate(-1.8deg); }
+}
+
+/* Плывущие облака */
+.cloud-1 {
+  animation: cloudDrift1 30s ease-in-out infinite;
+}
+
+.cloud-2 {
+  animation: cloudDrift2 40s ease-in-out 5s infinite;
+}
+
+@keyframes cloudDrift1 {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(30px); }
+}
+
+@keyframes cloudDrift2 {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-25px); }
 }
 
 /* ===== Табы ===== */

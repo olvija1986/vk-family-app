@@ -7,13 +7,13 @@ function layoutTree(members) {
   const byId = {}
   members.forEach(m => { byId[m.id] = m })
 
-  const CARD_W = 80
-  const CARD_H = 95
+  const CARD_W = 95
+  const CARD_H = 100
   const COUPLE_GAP = 16
-  const SUBTREE_GAP = 28
-  const LEVEL_GAP = 80
-  const MAX_ROW = 5
-  const ROW_GAP = CARD_H + 80 // расстояние между рядами детей (с запасом для линий)
+  const SUBTREE_GAP = 44
+  const LEVEL_GAP = 140
+  const MAX_ROW = 12
+  const ROW_GAP = CARD_H + LEVEL_GAP
 
   // Находим пары (супруги)
   const coupleMap = {}
@@ -27,15 +27,12 @@ function layoutTree(members) {
     }
   })
 
-  // Ключ ячейки без мутации массива
   function unitKey(ids) { return [...ids].sort().join('_') }
 
-  // Ширина самой ячейки (пара или одиночка)
   function unitSelfWidth(ids) {
     return ids.length === 2 ? CARD_W * 2 + COUPLE_GAP : CARD_W
   }
 
-  // Дети ячейки
   function getChildren(ids) {
     return members.filter(m => {
       const p1 = m.parent1Id, p2 = m.parent2Id
@@ -43,7 +40,6 @@ function layoutTree(members) {
     })
   }
 
-  // Группируем детей в ячейки (одиночка или пара)
   function childUnitsOf(ids) {
     const children = getChildren(ids)
     const units = []
@@ -84,7 +80,7 @@ function layoutTree(members) {
   })
 
   // === Рекурсивный расчёт ширины поддерева ===
-  const cache = {} // key → { width, childUnits, rows }
+  const cache = {}
 
   function calcSubtree(ids) {
     const key = unitKey(ids)
@@ -98,12 +94,12 @@ function layoutTree(members) {
       return cache[key]
     }
 
-    // Разбиваем на строки по MAX_ROW карточек (пара = 2 карточки)
+    // Разбиваем на строки по MAX_ROW карточек
     const rows = []
     let currentRow = []
     let currentCards = 0
     childUnits.forEach(cu => {
-      const cards = cu.length // 1 для одиночки, 2 для пары
+      const cards = cu.length
       if (currentCards + cards > MAX_ROW && currentRow.length > 0) {
         rows.push(currentRow)
         currentRow = [cu]
@@ -115,7 +111,6 @@ function layoutTree(members) {
     })
     if (currentRow.length) rows.push(currentRow)
 
-    // Ширина = макс ширина среди всех строк
     let maxRowW = 0
     rows.forEach(row => {
       let rowW = 0
@@ -145,34 +140,7 @@ function layoutTree(members) {
   const links = []
   const placedIds = new Set()
 
-  // Глобальный счётчик карточек (не ячеек!) на каждом уровне Y
-  const levelCount = {} // y → количество карточек
-
-  function countCardsAtLevel(y, unitList) {
-    if (!levelCount[y]) levelCount[y] = 0
-    // Пара = 2 карточки, одиночка = 1
-    unitList.forEach(cu => { levelCount[y] += cu.length })
-  }
-
-  function getCardsAtLevel(y) {
-    return levelCount[y] || 0
-  }
-
-  // Сколько карточек в списке ячеек
-  function countCards(unitList) {
-    return unitList.reduce((s, cu) => s + cu.length, 0)
-  }
-
-  // Найти свободный Y-уровень, чтобы добавить n карточек (макс MAX_ROW карточек на уровне)
-  function findFreeY(targetY, nCards) {
-    let y = targetY
-    while (getCardsAtLevel(y) + nCards > MAX_ROW) {
-      y += ROW_GAP
-    }
-    return y
-  }
-
-  function placeUnit(ids, cx, y, color, siblingIdx = 0) {
+  function placeUnit(ids, cx, y, color) {
     const key = unitKey(ids)
 
     // Размещаем ячейку
@@ -207,19 +175,12 @@ function layoutTree(members) {
     if (!rows.length) return
 
     const parentBottomY = y + CARD_H
-    const baseRowY = y + CARD_H + LEVEL_GAP
-
-    // Размещаем каждую строку детей с учётом глобального лимита
-    const allChildInfo = [] // { cx, y, rowIdx }
+    const addLine = (pts) => links.push({ type: 'parent-child', points: pts, color })
 
     rows.forEach((row, ri) => {
-      const targetY = baseRowY + ri * ROW_GAP
+      const childY = y + CARD_H + LEVEL_GAP + ri * ROW_GAP
 
-      // Проверяем, влезает ли эта группа на целевой уровень (считаем карточки, не ячейки)
-      const nCards = countCards(row)
-      const actualY = findFreeY(targetY, nCards)
-
-      // Считаем ширину этой строки
+      // Считаем ширину строки
       let rowW = 0
       row.forEach((cu, i) => {
         if (i > 0) rowW += SUBTREE_GAP
@@ -228,91 +189,52 @@ function layoutTree(members) {
 
       // Центрируем строку под родителем
       let childX = cx - rowW / 2
+      const childCenters = []
 
-      // Регистрируем занятость уровня
-      countCardsAtLevel(actualY, row)
-
-      row.forEach((cu, cuIdx) => {
+      row.forEach(cu => {
         const cuW = calcSubtree(cu).width
         const childCx = childX + cuW / 2
-        placeUnit(cu, childCx, actualY, color, cuIdx)
-        allChildInfo.push({ cx: childCx, y: actualY, rowIdx: ri })
+        placeUnit(cu, childCx, childY, color)
+        childCenters.push(childCx)
         childX += cuW + SUBTREE_GAP
       })
-    })
 
-    // === Рисуем линии ===
-    // Смещаем midY для каждой пары-сиблинга, чтобы горизонтальные перекладины не пересекались
-    const midYOffset = siblingIdx * 10
-    const midY = parentBottomY + LEVEL_GAP * 0.3 + midYOffset
-    const addLine = (pts) => links.push({ type: 'parent-child', points: pts, color })
+      // === Рисуем линии ===
+      // Точка начала вертикали: от родителя или от предыдущей строки
+      const prevBottom = ri === 0
+        ? parentBottomY
+        : (y + CARD_H + LEVEL_GAP + (ri - 1) * ROW_GAP + CARD_H)
 
-    // Вертикаль от родителя вниз до midY
-    addLine([{ x: cx, y: parentBottomY }, { x: cx, y: midY }])
+      // Горизонтальная перекладина по центру между prevBottom и childY
+      const midY = prevBottom + (childY - prevBottom) * 0.35
 
-    // Рисуем горизонтальную перекладину ТОЛЬКО между детьми, не включая parent cx
-    // Затем соединяем parent cx с перекладиной отдельно
-    function drawBar(children, barY) {
-      if (children.length === 1) {
-        const c = children[0]
-        // Г-образная линия: горизонтально от parent до ребёнка, потом вертикально вниз
-        if (cx !== c.cx) addLine([{ x: cx, y: barY }, { x: c.cx, y: barY }])
-        addLine([{ x: c.cx, y: barY }, { x: c.cx, y: c.y }])
-      } else {
-        const allCx = children.map(c => c.cx)
-        const leftX = Math.min(...allCx)
-        const rightX = Math.max(...allCx)
+      // Вертикаль от предыдущего уровня до midY
+      addLine([{ x: cx, y: prevBottom }, { x: cx, y: midY }])
 
-        // Горизонтальная перекладина только между крайними детьми
-        addLine([{ x: leftX, y: barY }, { x: rightX, y: barY }])
-
-        // Соединяем parent cx с перекладиной
-        if (cx < leftX) {
-          addLine([{ x: cx, y: barY }, { x: leftX, y: barY }])
-        } else if (cx > rightX) {
-          addLine([{ x: cx, y: barY }, { x: rightX, y: barY }])
+      if (childCenters.length === 1) {
+        // Один ребёнок — Г-образная линия
+        const ccx = childCenters[0]
+        if (cx !== ccx) {
+          addLine([{ x: cx, y: midY }, { x: ccx, y: midY }])
         }
-        // Если cx между leftX и rightX — он уже на перекладине, ничего дополнительно не нужно
-
+        addLine([{ x: ccx, y: midY }, { x: ccx, y: childY }])
+      } else {
+        // Несколько детей — горизонтальная перекладина
+        const allX = [cx, ...childCenters]
+        const leftX = Math.min(...allX)
+        const rightX = Math.max(...allX)
+        addLine([{ x: leftX, y: midY }, { x: rightX, y: midY }])
         // Вертикали от перекладины к детям
-        children.forEach(c => addLine([{ x: c.cx, y: barY }, { x: c.cx, y: c.y }]))
+        childCenters.forEach(ccx => {
+          addLine([{ x: ccx, y: midY }, { x: ccx, y: childY }])
+        })
       }
-    }
-
-    if (rows.length === 1) {
-      drawBar(allChildInfo, midY)
-    } else {
-      const yGroups = {}
-      allChildInfo.forEach(c => {
-        if (!yGroups[c.y]) yGroups[c.y] = []
-        yGroups[c.y].push(c)
-      })
-
-      const sortedYs = Object.keys(yGroups).map(Number).sort((a, b) => a - b)
-
-      // Первая строка — используем midY
-      drawBar(yGroups[sortedYs[0]], midY)
-
-      let prevRowY = sortedYs[0]
-      for (let si = 1; si < sortedYs.length; si++) {
-        const groupY = sortedYs[si]
-        const group = yGroups[groupY]
-        const prevCardsBottom = prevRowY + CARD_H
-        const rowMidY = prevCardsBottom + (groupY - prevCardsBottom) / 2
-
-        // Вертикаль продолжения от предыдущего ряда
-        addLine([{ x: cx, y: prevCardsBottom }, { x: cx, y: rowMidY }])
-
-        drawBar(group, rowMidY)
-
-        prevRowY = groupY
-      }
-    }
+    })
   }
 
-  // Размещаем корневые ячейки — каждая ветка получает свой цвет
+  // Размещаем корневые ячейки
   let rx = 0
-  rootUnits.forEach((ru) => {
+  rootUnits.forEach(ru => {
     const ruW = calcSubtree(ru).width
     const rcx = rx + ruW / 2
     const branchColor = BRANCH_COLORS[branchColorIdx % BRANCH_COLORS.length]
@@ -322,10 +244,8 @@ function layoutTree(members) {
   })
 
   // === Пост-обработка: устранение наложений ===
-  // Группируем узлы по Y-уровню и проверяем горизонтальные наложения
   const byY = {}
   nodes.forEach((n, i) => {
-    // Округляем Y для группировки (±5px = один ряд)
     const roundY = Math.round(n.y / 10) * 10
     if (!byY[roundY]) byY[roundY] = []
     byY[roundY].push(i)
@@ -333,16 +253,13 @@ function layoutTree(members) {
 
   Object.values(byY).forEach(indices => {
     if (indices.length <= 1) return
-    // Сортируем по X
     indices.sort((a, b) => nodes[a].x - nodes[b].x)
-    // Проверяем перекрытия и раздвигаем
     for (let i = 1; i < indices.length; i++) {
       const prev = nodes[indices[i - 1]]
       const curr = nodes[indices[i]]
-      const minGap = 8 // минимальный зазор между карточками
+      const minGap = 12
       const overlap = (prev.x + prev.w + minGap) - curr.x
       if (overlap > 0) {
-        // Сдвигаем текущую и все последующие карточки вправо
         for (let j = i; j < indices.length; j++) {
           nodes[indices[j]].x += overlap
         }
@@ -443,7 +360,6 @@ function Minimap({ nodes, links, viewport, onClick, onClose }) {
             <rect key={n.id} x={n.x} y={n.y} width={n.w} height={n.h} rx={4}
               fill="#e8f5e9" stroke="#43a047" strokeWidth={1/scale} />
           ))}
-          {/* Viewport rectangle */}
           <rect
             x={-viewport.x / viewport.scale}
             y={-viewport.y / viewport.scale}
@@ -470,7 +386,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
   const [containerSize, setContainerSize] = useState({ w: 400, h: 600 })
 
-  const { nodes, links, familyBoxes } = useMemo(() => layoutTree(members), [members])
+  const { nodes, links } = useMemo(() => layoutTree(members), [members])
 
   // Авто-центрировать при загрузке
   useEffect(() => {
@@ -518,7 +434,7 @@ export default function FamilyTree({ members, onRefresh, loading, onAddClick, on
 
   // Zoom
   const handleZoom = useCallback((delta) => {
-    setScale(s => Math.max(0.2, Math.min(2, s + delta)))
+    setScale(s => Math.max(0.15, Math.min(2, s + delta)))
   }, [])
 
   const onWheel = useCallback((e) => {

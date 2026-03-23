@@ -158,168 +158,165 @@ export default function App() {
           <rect width="500" height="900" fill="url(#skyGrad)"/>
 
           {/* Облака */}
-          <g className="cloud cloud-1" opacity="0.07">
-            <ellipse cx="320" cy="120" rx="55" ry="22" fill="#fff"/>
-            <ellipse cx="345" cy="110" rx="40" ry="20" fill="#fff"/>
-            <ellipse cx="295" cy="115" rx="35" ry="18" fill="#fff"/>
-            <ellipse cx="330" cy="105" rx="30" ry="16" fill="#fff"/>
+          <g className="cloud cloud-1" opacity="0.15">
+            <ellipse cx="320" cy="100" rx="65" ry="26" fill="#fff"/>
+            <ellipse cx="350" cy="88" rx="48" ry="24" fill="#fff"/>
+            <ellipse cx="290" cy="94" rx="42" ry="22" fill="#fff"/>
+            <ellipse cx="335" cy="82" rx="35" ry="19" fill="#fff"/>
           </g>
-          <g className="cloud cloud-2" opacity="0.05">
-            <ellipse cx="150" cy="80" rx="40" ry="16" fill="#fff"/>
-            <ellipse cx="170" cy="72" rx="30" ry="14" fill="#fff"/>
-            <ellipse cx="135" cy="75" rx="25" ry="12" fill="#fff"/>
+          <g className="cloud cloud-2" opacity="0.12">
+            <ellipse cx="130" cy="60" rx="50" ry="20" fill="#fff"/>
+            <ellipse cx="155" cy="50" rx="38" ry="18" fill="#fff"/>
+            <ellipse cx="110" cy="55" rx="32" ry="15" fill="#fff"/>
           </g>
 
           {/* Холмы на заднем плане */}
-          <g opacity="0.06">
+          <g opacity="0.14">
             {/* Дальний холм */}
-            <path d="M-50 750 Q100 680 250 720 Q400 760 550 700 L550 900 L-50 900 Z" fill="url(#hillGrad2)"/>
+            <path d="M-50 700 Q100 620 250 670 Q400 720 550 650 L550 900 L-50 900 Z" fill="url(#hillGrad2)"/>
             {/* Ближний холм справа */}
-            <path d="M200 780 Q350 720 450 750 Q500 765 550 760 L550 900 L200 900 Z" fill="url(#hillGrad1)"/>
+            <path d="M180 740 Q330 670 440 710 Q500 730 550 720 L550 900 L180 900 Z" fill="url(#hillGrad1)"/>
             {/* Ближний холм слева */}
-            <path d="M-50 790 Q50 760 150 780 Q220 795 280 800 L280 900 L-50 900 Z" fill="url(#hillGrad1)"/>
+            <path d="M-50 750 Q60 710 160 740 Q240 765 320 770 L320 900 L-50 900 Z" fill="url(#hillGrad1)"/>
           </g>
 
-          {/* Цветущее дерево — ствол и ветки */}
-          <g opacity="0.08">
+          {/* Цветущее дерево — ствол и ветки — БОЛЬШОЕ */}
+          <g opacity="0.18">
             {/* Главный ствол */}
-            <path d="M128 580 Q126 520 125 480 Q124 450 126 420 L132 420 Q134 450 133 480 Q132 520 130 580 Z" fill="#4a3728"/>
+            <path d="M145 720 Q140 620 138 550 Q136 490 140 440 Q142 410 144 380 L156 380 Q158 410 160 440 Q164 490 162 550 Q160 620 155 720 Z" fill="#4a3728"/>
+            {/* Корни */}
+            <path d="M145 720 Q130 740 110 750" stroke="#4a3728" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <path d="M155 720 Q170 740 190 748" stroke="#4a3728" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <path d="M150 725 Q150 745 148 755" stroke="#4a3728" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
             {/* Ветки */}
-            <path d="M128 460 Q115 440 100 425 Q90 418 82 412" stroke="#4a3728" strokeWidth="2" fill="none" strokeLinecap="round"/>
-            <path d="M127 480 Q110 465 95 455" stroke="#4a3728" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-            <path d="M130 450 Q145 435 160 420 Q168 414 175 410" stroke="#4a3728" strokeWidth="2" fill="none" strokeLinecap="round"/>
-            <path d="M131 470 Q148 458 162 448" stroke="#4a3728" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-            <path d="M129 440 Q128 425 130 410 Q131 400 132 395" stroke="#4a3728" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+            <path d="M142 500 Q120 470 95 445 Q78 430 60 420" stroke="#4a3728" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+            <path d="M140 540 Q115 515 88 498" stroke="#4a3728" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+            <path d="M144 470 Q128 445 108 425 Q95 415 85 408" stroke="#4a3728" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            <path d="M156 490 Q182 462 210 440 Q225 428 242 420" stroke="#4a3728" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+            <path d="M160 530 Q188 508 215 492" stroke="#4a3728" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+            <path d="M158 460 Q175 440 195 425 Q210 415 225 408" stroke="#4a3728" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            <path d="M148 420 Q146 395 148 370 Q149 350 152 335" stroke="#4a3728" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            <path d="M152 400 Q158 380 168 365" stroke="#4a3728" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            <path d="M148 410 Q138 390 128 375" stroke="#4a3728" strokeWidth="2" fill="none" strokeLinecap="round"/>
           </g>
 
-          {/* Крона — цветущие розовые шарики */}
-          <g opacity="0.09">
+          {/* Крона — цветущие розовые шарики — БОЛЬШАЯ */}
+          <g opacity="0.2">
             {/* Основная масса — нижний слой */}
             <g className="leaf-group-1">
-              <ellipse cx="130" cy="420" rx="65" ry="50" fill="#d4869a"/>
-              <ellipse cx="105" cy="410" rx="40" ry="35" fill="#dba0b0"/>
+              <ellipse cx="150" cy="460" rx="90" ry="70" fill="#d4869a"/>
+              <ellipse cx="110" cy="445" rx="60" ry="50" fill="#dba0b0"/>
             </g>
             <g className="leaf-group-2">
-              <ellipse cx="155" cy="405" rx="45" ry="38" fill="#d4869a"/>
-              <ellipse cx="90" cy="425" rx="30" ry="28" fill="#c97a90"/>
+              <ellipse cx="190" cy="440" rx="70" ry="55" fill="#d4869a"/>
+              <ellipse cx="80" cy="465" rx="45" ry="40" fill="#c97a90"/>
             </g>
             {/* Средний слой */}
             <g className="leaf-group-3">
-              <ellipse cx="130" cy="390" rx="55" ry="42" fill="#dba0b0"/>
-              <ellipse cx="110" cy="380" rx="35" ry="30" fill="#e8b8c4"/>
+              <ellipse cx="150" cy="410" rx="80" ry="60" fill="#dba0b0"/>
+              <ellipse cx="120" cy="395" rx="55" ry="45" fill="#e8b8c4"/>
             </g>
             <g className="leaf-group-4">
-              <ellipse cx="150" cy="385" rx="40" ry="32" fill="#dba0b0"/>
-              <ellipse cx="95" cy="395" rx="28" ry="24" fill="#e8b8c4"/>
+              <ellipse cx="185" cy="405" rx="60" ry="48" fill="#dba0b0"/>
+              <ellipse cx="95" cy="415" rx="40" ry="35" fill="#e8b8c4"/>
             </g>
             {/* Верхний слой — светлее */}
             <g className="leaf-group-5">
-              <ellipse cx="130" cy="370" rx="40" ry="32" fill="#e8b8c4"/>
-              <ellipse cx="118" cy="360" rx="28" ry="22" fill="#f0d0d8"/>
+              <ellipse cx="150" cy="375" rx="65" ry="50" fill="#e8b8c4"/>
+              <ellipse cx="130" cy="358" rx="45" ry="38" fill="#f0d0d8"/>
             </g>
             <g className="leaf-group-6">
-              <ellipse cx="142" cy="365" rx="25" ry="20" fill="#f0d0d8"/>
-              <ellipse cx="130" cy="355" rx="18" ry="15" fill="#f5e0e5"/>
+              <ellipse cx="170" cy="365" rx="40" ry="32" fill="#f0d0d8"/>
+              <ellipse cx="150" cy="345" rx="30" ry="25" fill="#f5e0e5"/>
             </g>
             {/* Мелкие цветочки по краям */}
             <g className="leaf-group-1">
-              <circle cx="72" cy="430" r="8" fill="#d4869a"/>
-              <circle cx="80" cy="415" r="6" fill="#e8b8c4"/>
-              <circle cx="170" cy="415" r="7" fill="#d4869a"/>
-              <circle cx="165" cy="400" r="5" fill="#e8b8c4"/>
+              <circle cx="55" cy="475" r="12" fill="#d4869a"/>
+              <circle cx="68" cy="450" r="9" fill="#e8b8c4"/>
+              <circle cx="240" cy="445" r="11" fill="#d4869a"/>
+              <circle cx="230" cy="425" r="8" fill="#e8b8c4"/>
+              <circle cx="50" cy="440" r="7" fill="#c97a90"/>
+              <circle cx="248" cy="465" r="8" fill="#c97a90"/>
             </g>
             <g className="leaf-group-3">
-              <circle cx="85" cy="375" r="5" fill="#f0d0d8"/>
-              <circle cx="160" cy="375" r="5" fill="#f0d0d8"/>
-              <circle cx="130" cy="348" r="4" fill="#f5e0e5"/>
+              <circle cx="78" cy="395" r="8" fill="#f0d0d8"/>
+              <circle cx="225" cy="390" r="8" fill="#f0d0d8"/>
+              <circle cx="150" cy="328" r="7" fill="#f5e0e5"/>
+              <circle cx="100" cy="370" r="6" fill="#f5e0e5"/>
+              <circle cx="205" cy="370" r="6" fill="#f5e0e5"/>
             </g>
           </g>
 
           {/* Падающие лепестки */}
           <g>
-            <ellipse rx="2" ry="1.2" fill="#e8b8c4">
-              <animateTransform attributeName="transform" type="translate" values="140 400; 165 550; 145 700; 170 850; 155 900" dur="10s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.08;0.06;0.03;0" dur="10s" repeatCount="indefinite"/>
+            <ellipse rx="3" ry="1.8" fill="#e8b8c4">
+              <animateTransform attributeName="transform" type="translate" values="160 420; 190 560; 170 700; 200 830; 180 900" dur="10s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.18;0.14;0.06;0" dur="10s" repeatCount="indefinite"/>
             </ellipse>
-            <ellipse rx="1.8" ry="1" fill="#f0d0d8">
-              <animateTransform attributeName="transform" type="translate" values="120 380; 100 520; 115 660; 95 800; 110 900" dur="12s" begin="2s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.07;0.05;0.02;0" dur="12s" begin="2s" repeatCount="indefinite"/>
+            <ellipse rx="2.5" ry="1.5" fill="#f0d0d8">
+              <animateTransform attributeName="transform" type="translate" values="130 380; 105 520; 125 660; 100 800; 115 900" dur="12s" begin="2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.16;0.12;0.05;0" dur="12s" begin="2s" repeatCount="indefinite"/>
             </ellipse>
-            <ellipse rx="1.5" ry="0.8" fill="#d4869a">
-              <animateTransform attributeName="transform" type="translate" values="150 410; 175 560; 160 710; 180 860; 165 900" dur="14s" begin="5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.06;0.04;0.02;0" dur="14s" begin="5s" repeatCount="indefinite"/>
+            <ellipse rx="2.2" ry="1.2" fill="#d4869a">
+              <animateTransform attributeName="transform" type="translate" values="175 440; 205 580; 185 720; 215 850; 195 900" dur="14s" begin="5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.15;0.10;0.04;0" dur="14s" begin="5s" repeatCount="indefinite"/>
+            </ellipse>
+            <ellipse rx="2" ry="1" fill="#e8b8c4">
+              <animateTransform attributeName="transform" type="translate" values="100 400; 80 550; 110 690; 85 820; 95 900" dur="11s" begin="3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.14;0.10;0.04;0" dur="11s" begin="3s" repeatCount="indefinite"/>
             </ellipse>
           </g>
 
-          {/* Стая птиц — V-образные галочки разного размера */}
+          {/* Стая птиц — V-образные галочки */}
           <g className="flock flock-1">
             {/* Лидер стаи */}
-            <path d="M220 320 Q215 315 208 310" stroke="#5d4037" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.12">
+            <path d="M240 340 Q234 333 226 328" stroke="#5d4037" strokeWidth="1.2" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 80 -40; 160 -80; 250 -120; 350 -160" dur="20s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.12;0.1;0.06;0" dur="20s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.25;0.2;0.1;0" dur="20s" repeatCount="indefinite"/>
             </path>
-            <path d="M220 320 Q225 315 232 310" stroke="#5d4037" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.12">
+            <path d="M240 340 Q246 333 254 328" stroke="#5d4037" strokeWidth="1.2" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 80 -40; 160 -80; 250 -120; 350 -160" dur="20s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.12;0.1;0.06;0" dur="20s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.25;0.2;0.1;0" dur="20s" repeatCount="indefinite"/>
             </path>
 
-            {/* Птица 2 — слева от лидера */}
-            <path d="M205 330 Q200 325 194 321" stroke="#5d4037" strokeWidth="0.7" fill="none" strokeLinecap="round">
+            {/* Птица 2 */}
+            <path d="M222 355 Q217 349 210 345" stroke="#5d4037" strokeWidth="1" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 78 -38; 156 -76; 245 -115; 345 -155" dur="20s" begin="0.3s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.1;0.08;0.05;0" dur="20s" begin="0.3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.22;0.18;0.08;0" dur="20s" begin="0.3s" repeatCount="indefinite"/>
             </path>
-            <path d="M205 330 Q210 325 216 321" stroke="#5d4037" strokeWidth="0.7" fill="none" strokeLinecap="round">
+            <path d="M222 355 Q227 349 234 345" stroke="#5d4037" strokeWidth="1" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 78 -38; 156 -76; 245 -115; 345 -155" dur="20s" begin="0.3s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.1;0.08;0.05;0" dur="20s" begin="0.3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.22;0.18;0.08;0" dur="20s" begin="0.3s" repeatCount="indefinite"/>
             </path>
 
-            {/* Птица 3 — справа от лидера */}
-            <path d="M238 335 Q233 330 227 326" stroke="#5d4037" strokeWidth="0.7" fill="none" strokeLinecap="round">
+            {/* Птица 3 */}
+            <path d="M260 353 Q254 347 248 343" stroke="#5d4037" strokeWidth="1" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 82 -42; 164 -84; 255 -125; 355 -165" dur="20s" begin="0.5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.1;0.08;0.04;0" dur="20s" begin="0.5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.22;0.18;0.08;0" dur="20s" begin="0.5s" repeatCount="indefinite"/>
             </path>
-            <path d="M238 335 Q243 330 249 326" stroke="#5d4037" strokeWidth="0.7" fill="none" strokeLinecap="round">
+            <path d="M260 353 Q266 347 272 343" stroke="#5d4037" strokeWidth="1" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 82 -42; 164 -84; 255 -125; 355 -165" dur="20s" begin="0.5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.1;0.08;0.04;0" dur="20s" begin="0.5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.22;0.18;0.08;0" dur="20s" begin="0.5s" repeatCount="indefinite"/>
             </path>
 
-            {/* Птица 4 — дальше слева */}
-            <path d="M192 345 Q188 341 183 338" stroke="#5d4037" strokeWidth="0.6" fill="none" strokeLinecap="round">
+            {/* Птица 4 */}
+            <path d="M208 370 Q203 365 197 362" stroke="#5d4037" strokeWidth="0.9" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 75 -35; 150 -70; 240 -110; 340 -150" dur="20s" begin="0.8s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.08;0.06;0.03;0" dur="20s" begin="0.8s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.18;0.14;0.06;0" dur="20s" begin="0.8s" repeatCount="indefinite"/>
             </path>
-            <path d="M192 345 Q196 341 201 338" stroke="#5d4037" strokeWidth="0.6" fill="none" strokeLinecap="round">
+            <path d="M208 370 Q213 365 219 362" stroke="#5d4037" strokeWidth="0.9" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 75 -35; 150 -70; 240 -110; 340 -150" dur="20s" begin="0.8s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.08;0.06;0.03;0" dur="20s" begin="0.8s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.18;0.14;0.06;0" dur="20s" begin="0.8s" repeatCount="indefinite"/>
             </path>
 
-            {/* Птица 5 — дальше справа */}
-            <path d="M252 348 Q247 343 242 340" stroke="#5d4037" strokeWidth="0.6" fill="none" strokeLinecap="round">
+            {/* Птица 5 */}
+            <path d="M275 368 Q270 363 264 360" stroke="#5d4037" strokeWidth="0.9" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 84 -44; 168 -88; 260 -130; 360 -170" dur="20s" begin="1s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.08;0.06;0.03;0" dur="20s" begin="1s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.18;0.14;0.06;0" dur="20s" begin="1s" repeatCount="indefinite"/>
             </path>
-            <path d="M252 348 Q257 343 262 340" stroke="#5d4037" strokeWidth="0.6" fill="none" strokeLinecap="round">
+            <path d="M275 368 Q280 363 286 360" stroke="#5d4037" strokeWidth="0.9" fill="none" strokeLinecap="round">
               <animateTransform attributeName="transform" type="translate" values="0 0; 84 -44; 168 -88; 260 -130; 360 -170" dur="20s" begin="1s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.08;0.06;0.03;0" dur="20s" begin="1s" repeatCount="indefinite"/>
-            </path>
-
-            {/* Птицы 6-7 — хвост стаи */}
-            <path d="M182 360 Q178 356 174 353" stroke="#5d4037" strokeWidth="0.5" fill="none" strokeLinecap="round">
-              <animateTransform attributeName="transform" type="translate" values="0 0; 72 -32; 144 -64; 230 -100; 330 -140" dur="20s" begin="1.3s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.06;0.05;0.02;0" dur="20s" begin="1.3s" repeatCount="indefinite"/>
-            </path>
-            <path d="M182 360 Q186 356 190 353" stroke="#5d4037" strokeWidth="0.5" fill="none" strokeLinecap="round">
-              <animateTransform attributeName="transform" type="translate" values="0 0; 72 -32; 144 -64; 230 -100; 330 -140" dur="20s" begin="1.3s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.06;0.05;0.02;0" dur="20s" begin="1.3s" repeatCount="indefinite"/>
-            </path>
-
-            <path d="M265 358 Q261 354 257 351" stroke="#5d4037" strokeWidth="0.5" fill="none" strokeLinecap="round">
-              <animateTransform attributeName="transform" type="translate" values="0 0; 86 -46; 172 -92; 265 -135; 365 -175" dur="20s" begin="1.5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.06;0.05;0.02;0" dur="20s" begin="1.5s" repeatCount="indefinite"/>
-            </path>
-            <path d="M265 358 Q269 354 273 351" stroke="#5d4037" strokeWidth="0.5" fill="none" strokeLinecap="round">
-              <animateTransform attributeName="transform" type="translate" values="0 0; 86 -46; 172 -92; 265 -135; 365 -175" dur="20s" begin="1.5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0;0.06;0.05;0.02;0" dur="20s" begin="1.5s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.18;0.14;0.06;0" dur="20s" begin="1s" repeatCount="indefinite"/>
             </path>
           </g>
         </svg>
@@ -330,7 +327,10 @@ export default function App() {
           members={members}
           onRefresh={loadData}
           loading={loading}
-          onAddClick={() => setModal('member')}
+          onAddClick={() => {
+            setMemberForm({ name: '', relation: RELATIONS[0], parent1Id: '', parent2Id: '', spouseId: '' })
+            setModal('member')
+          }}
           onCardClick={(member) => { setSelectedMember(member); setModal('detail') }}
         />
       )}
@@ -465,7 +465,6 @@ export default function App() {
             )}
 
             <button className="delete-btn" onClick={async () => {
-              if (!confirm(`Удалить ${selectedMember.name}?`)) return
               const r = await removeMember(selectedMember.id)
               if (r.success) {
                 const updated = members.filter(m => m.id !== selectedMember.id)

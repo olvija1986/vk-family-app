@@ -172,7 +172,7 @@ function layoutTree(members) {
     return y
   }
 
-  function placeUnit(ids, cx, y, color) {
+  function placeUnit(ids, cx, y, color, siblingIdx = 0) {
     const key = unitKey(ids)
 
     // Размещаем ячейку
@@ -232,36 +232,55 @@ function layoutTree(members) {
       // Регистрируем занятость уровня
       countCardsAtLevel(actualY, row)
 
-      row.forEach((cu) => {
+      row.forEach((cu, cuIdx) => {
         const cuW = calcSubtree(cu).width
         const childCx = childX + cuW / 2
-        placeUnit(cu, childCx, actualY, color)
+        placeUnit(cu, childCx, actualY, color, cuIdx)
         allChildInfo.push({ cx: childCx, y: actualY, rowIdx: ri })
         childX += cuW + SUBTREE_GAP
       })
     })
 
     // === Рисуем линии ===
-    const midY = parentBottomY + LEVEL_GAP * 0.35
+    // Смещаем midY для каждой пары-сиблинга, чтобы горизонтальные перекладины не пересекались
+    const midYOffset = siblingIdx * 10
+    const midY = parentBottomY + LEVEL_GAP * 0.3 + midYOffset
     const addLine = (pts) => links.push({ type: 'parent-child', points: pts, color })
 
-    // Вертикаль от родителя вниз
+    // Вертикаль от родителя вниз до midY
     addLine([{ x: cx, y: parentBottomY }, { x: cx, y: midY }])
 
-    // Если только одна строка — простая горизонтальная перекладина
-    if (rows.length === 1) {
-      const rowChildren = allChildInfo
-      if (rowChildren.length === 1) {
-        const c = rowChildren[0]
-        if (cx !== c.cx) addLine([{ x: cx, y: midY }, { x: c.cx, y: midY }])
-        addLine([{ x: c.cx, y: midY }, { x: c.cx, y: c.y }])
+    // Рисуем горизонтальную перекладину ТОЛЬКО между детьми, не включая parent cx
+    // Затем соединяем parent cx с перекладиной отдельно
+    function drawBar(children, barY) {
+      if (children.length === 1) {
+        const c = children[0]
+        // Г-образная линия: горизонтально от parent до ребёнка, потом вертикально вниз
+        if (cx !== c.cx) addLine([{ x: cx, y: barY }, { x: c.cx, y: barY }])
+        addLine([{ x: c.cx, y: barY }, { x: c.cx, y: c.y }])
       } else {
-        const allCx = rowChildren.map(c => c.cx)
-        const leftX = Math.min(...allCx, cx)
-        const rightX = Math.max(...allCx, cx)
-        addLine([{ x: leftX, y: midY }, { x: rightX, y: midY }])
-        rowChildren.forEach(c => addLine([{ x: c.cx, y: midY }, { x: c.cx, y: c.y }]))
+        const allCx = children.map(c => c.cx)
+        const leftX = Math.min(...allCx)
+        const rightX = Math.max(...allCx)
+
+        // Горизонтальная перекладина только между крайними детьми
+        addLine([{ x: leftX, y: barY }, { x: rightX, y: barY }])
+
+        // Соединяем parent cx с перекладиной
+        if (cx < leftX) {
+          addLine([{ x: cx, y: barY }, { x: leftX, y: barY }])
+        } else if (cx > rightX) {
+          addLine([{ x: cx, y: barY }, { x: rightX, y: barY }])
+        }
+        // Если cx между leftX и rightX — он уже на перекладине, ничего дополнительно не нужно
+
+        // Вертикали от перекладины к детям
+        children.forEach(c => addLine([{ x: c.cx, y: barY }, { x: c.cx, y: c.y }]))
       }
+    }
+
+    if (rows.length === 1) {
+      drawBar(allChildInfo, midY)
     } else {
       const yGroups = {}
       allChildInfo.forEach(c => {
@@ -271,12 +290,8 @@ function layoutTree(members) {
 
       const sortedYs = Object.keys(yGroups).map(Number).sort((a, b) => a - b)
 
-      const firstGroup = yGroups[sortedYs[0]]
-      const allFirstCx = firstGroup.map(c => c.cx)
-      const leftX1 = Math.min(...allFirstCx, cx)
-      const rightX1 = Math.max(...allFirstCx, cx)
-      addLine([{ x: leftX1, y: midY }, { x: rightX1, y: midY }])
-      firstGroup.forEach(c => addLine([{ x: c.cx, y: midY }, { x: c.cx, y: c.y }]))
+      // Первая строка — используем midY
+      drawBar(yGroups[sortedYs[0]], midY)
 
       let prevRowY = sortedYs[0]
       for (let si = 1; si < sortedYs.length; si++) {
@@ -285,15 +300,10 @@ function layoutTree(members) {
         const prevCardsBottom = prevRowY + CARD_H
         const rowMidY = prevCardsBottom + (groupY - prevCardsBottom) / 2
 
+        // Вертикаль продолжения от предыдущего ряда
         addLine([{ x: cx, y: prevCardsBottom }, { x: cx, y: rowMidY }])
 
-        const allCx = group.map(c => c.cx)
-        const leftX = Math.min(...allCx)
-        const rightX = Math.max(...allCx)
-        if (leftX !== rightX) addLine([{ x: leftX, y: rowMidY }, { x: rightX, y: rowMidY }])
-        const nearestX = Math.max(leftX, Math.min(rightX, cx))
-        if (cx !== nearestX) addLine([{ x: cx, y: rowMidY }, { x: nearestX, y: rowMidY }])
-        group.forEach(c => addLine([{ x: c.cx, y: rowMidY }, { x: c.cx, y: c.y }]))
+        drawBar(group, rowMidY)
 
         prevRowY = groupY
       }
